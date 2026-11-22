@@ -94,6 +94,7 @@ public sealed class UserStoryTools : TaigaToolBase
         [Description("Backlog order.")] int? backlog_order = null,
         [Description("Sprint order.")] int? sprint_order = null,
         [Description("Kanban order.")] int? kanban_order = null,
+        [Description("Kanban swimlane ID. See the project's swimlanes.")] int? swimlane = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -115,7 +116,8 @@ public sealed class UserStoryTools : TaigaToolBase
                 ("watchers", watchers),
                 ("backlog_order", backlog_order),
                 ("sprint_order", sprint_order),
-                ("kanban_order", kanban_order));
+                ("kanban_order", kanban_order),
+                ("swimlane", swimlane));
             return Client.PostAsync("userstories", body, ct: cancellationToken);
         });
     }
@@ -139,6 +141,7 @@ public sealed class UserStoryTools : TaigaToolBase
         [Description("Points: a dictionary {\"role_ID\": value}.")] Dictionary<string, double>? points = null,
         [Description("Tags.")] string[]? tags = null,
         [Description("Watcher IDs.")] int[]? watchers = null,
+        [Description("Kanban swimlane ID. See the project's swimlanes.")] int? swimlane = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -158,7 +161,8 @@ public sealed class UserStoryTools : TaigaToolBase
                 ("team_requirement", team_requirement),
                 ("points", points),
                 ("tags", tags),
-                ("watchers", watchers));
+                ("watchers", watchers),
+                ("swimlane", swimlane));
             var path = $"userstories/{user_story_id}";
             return Client.PatchAsync(path, body, cancellationToken);
         });

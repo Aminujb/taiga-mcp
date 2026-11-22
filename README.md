@@ -20,6 +20,7 @@ This is a fork of [BFastovetskiy/taiga-mcp](https://github.com/BFastovetskiy/tai
 
 - adds read-only tools for story, task and issue comments;
 - adds an optional `comment` to the story, task and issue update tools;
+- adds an optional Kanban `swimlane` to the story create and update tools;
 - removes `replace_all` from those three update tools, so an update only changes the fields it is given;
 - listens on `127.0.0.1` by default, and no longer ships the original author's certificate;
 - translates the code, tool descriptions and messages to English.
@@ -73,12 +74,12 @@ curl.exe http://127.0.0.1:5000/health/ready
 
 You should see `{"status":"Healthy"}`.
 
-### 4. Block the risky tools
+### 4. Limit what your Claude Code can use
 
-Add this to `permissions.deny` in `~/.claude/settings.json`, merging it with anything already there. It stops Claude from reading your credentials file and leaves it with read tools plus story, task and issue updates.
+The server exposes all 75 tools. This recommended step limits only your own Claude Code, and nothing is restricted until you add it. Add this to `permissions.deny` in `~/.claude/settings.json`, merging it with anything already there. It stops Claude from reading your credentials file and leaves it with the read tools, story and task creation, and story, task and issue updates.
 
 <details>
-<summary>Block list (46 entries)</summary>
+<summary>Deny list (44 entries)</summary>
 
 ```json
 {
@@ -97,8 +98,6 @@ Add this to `permissions.deny` in `~/.claude/settings.json`, merging it with any
       "mcp__taiga__taiga_create_membership",
       "mcp__taiga__taiga_create_project",
       "mcp__taiga__taiga_create_role",
-      "mcp__taiga__taiga_create_task",
-      "mcp__taiga__taiga_create_userstory",
       "mcp__taiga__taiga_delete_epic",
       "mcp__taiga__taiga_delete_epic_related_userstory",
       "mcp__taiga__taiga_delete_issue",
@@ -168,7 +167,7 @@ The change appears under your name, because the server uses your login.
 
 The local setup doesn't carry over to a shared server as is:
 
-- **The block list only protects one person's Claude Code.** Anyone with the MCP token could still call `taiga_delete_project` on a shared server, so the blocked tools must be removed from the server itself.
+- **The deny list is a local Claude Code setting.** The server still exposes all 75 tools, so anyone with the MCP token could call `taiga_delete_project` on a shared server. Tools the team shouldn't use must be removed from the server itself.
 - **One deployed login puts every change under one name.** Keeping each person's name needs per-user Taiga credentials, which the server doesn't support yet.
 - **`/health` and `/metrics` have no token.** Keep them off the public network.
 - **Plain HTTP isn't safe across a network.** Put the server behind HTTPS.
@@ -573,10 +572,11 @@ Notes:
 
 ## Testing
 
-The `tests/TaigaMcp.Tests` project covers key paths with regression tests (xUnit, 78 tests):
+The `tests/TaigaMcp.Tests` project covers key paths with regression tests (xUnit, 81 tests):
 
 - `ToolsTests` / `ToolsInvocationTests` — registration and invocation of all 75 tools;
 - `CommentToolsTests` — reading ticket comments;
+- `UserStorySwimlaneTests` — setting a story's Kanban swimlane;
 - `TaigaClientTests` — authentication (including resilience to invalid JSON), retries, pagination;
 - `TaigaHttpHandlerFactoryTests` — early validation and certificate handling (pinning);
 - `TaigaAuthStoreTests` — thread safety of the token cache;
