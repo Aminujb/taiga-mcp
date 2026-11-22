@@ -1,132 +1,305 @@
-# Taiga MCP Server — MCP-сервер для Taiga REST API
+# Taiga MCP Server — MCP server for the Taiga REST API
 
-[English](README.en.md) | **Русский**
+**English** | [Русский](README.ru.md)
 
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/)
 [![MCP Server](https://img.shields.io/badge/MCP%20Server-Active-green.svg)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
 
-## Описание проекта
+## Project Description
 
-**Taiga MCP Server** — сервер Model Context Protocol (MCP) на C#/.NET 8.0, который предоставляет LLM-агентам доступ к REST API **Taiga** по HTTP. Сервер предоставляет 72 инструмента для управления проектами, пользовательскими историями, задачами, проблемами, эпиками, ролями, пользователями и участниками проекта.
+**Taiga MCP Server** is a Model Context Protocol (MCP) server written in C#/.NET 8.0 that gives LLM agents access to the **Taiga** REST API over HTTP. It exposes 75 tools for managing projects, user stories, tasks, issues, epics, roles, users, and project members/invitations.
 
-- **Транспорт:** Streamable HTTP (`ModelContextProtocol.AspNetCore`).
-- **Платформа:** .NET 8.0.
-- **Источники:** только официальный C# MCP SDK и REST API Taiga (v1).
+- **Transport:** Streamable HTTP (`ModelContextProtocol.AspNetCore`).
+- **Platform:** .NET 8.0.
+- **Sources:** built solely on the official C# MCP SDK and the Taiga REST API (v1).
 
-## Ключевые функции
+## About This Fork
 
-- **72 MCP-инструмента** — проекты, пользовательские истории, задачи, проблемы, эпики, роли, пользователи, участники/приглашения.
-- **Авторизация Taiga** — вход по логину/паролю, готовый токен, refresh-токен, а также cookie-сессия (для SSO).
-- **Оптимистичный контроль версий (OCC)** — параметр `version` при изменении объектов.
-- **Управление пагинацией** — заголовок `x-disable-pagination`.
-- **Устойчивость** — автоматический повтор при `408`/`429`/`5xx` и сетевых сбоях с экспоненциальной задержкой.
-- **Корпоративные/самоподписанные сертификаты** — pinning сертификата или доверенный корневой ЦС.
-- **Защита MCP-эндпоинта** — общий токен (`X-Api-Key`/`Bearer`), сравнение с постоянным временем.
-- **Конфигурируемый адрес и порт** прослушивания (секция `Server`).
-- **Health-эндпоинты** — `/health`, `/health/live`, `/health/ready` (readiness с кэшированием).
-- **Аудит деструктивных инструментов** — ILogger + файл JSON Lines c ротацией.
-- **Rate limiting** — ограничение частоты запросов к MCP-эндпоинту (ключ — токен или IP).
-- **Метрики Prometheus** (`/metrics`) — RPS, latency и error rate вызовов инструментов.
-- **Корректное завершение (graceful shutdown)** и остановка при критических ошибках.
-- **Конфигурация через ENV** — параметры переопределяются переменными окружения.
-- **Docker** — мультистейдж `Dockerfile`: приложение в `/opt/mcp`, запуск от non-root (`app`, UID 1654), параметры через ENV, конфиг и сертификаты через монтирование.
-- **Unit-тесты** (xUnit) с покрытием security-критичных путей.
+This is a fork of [BFastovetskiy/taiga-mcp](https://github.com/BFastovetskiy/taiga-mcp). The original Russian README is kept as [README.ru.md](README.ru.md). This fork:
 
-## Требования
+- adds read-only tools for story, task and issue comments;
+- adds an optional `comment` to the story, task and issue update tools;
+- removes `replace_all` from those three update tools, so an update only changes the fields it is given;
+- listens on `127.0.0.1` by default, and no longer ships the original author's certificate;
+- translates the code, tool descriptions and messages to English.
 
-- [.NET SDK 8.0](https://dotnet.microsoft.com/download) или новее (проект нацелен на `net8.0`).
-- Доступ к инстансу Taiga по REST API (`/api/v1`).
+## Try It Locally With Claude Code
 
-## Быстрый старт
+This runs the server in Docker on your machine, using your own Taiga login. These commands are for Windows PowerShell. You need Docker Desktop, Git and Claude Code, but not the .NET SDK.
+
+### 1. Build the image
 
 ```powershell
-# Сборка
+git clone -b chore/thrivo-safe-defaults https://github.com/Aminujb/taiga-mcp.git
+cd taiga-mcp
+docker build -t taiga-mcp:local .
+```
+
+### 2. Create your credentials file
+
+This generates a random token that protects the local server, saves it for Claude Code, and creates a file that only your Windows account can read.
+
+```powershell
+$bytes = New-Object byte[] 32
+[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+$token = -join ($bytes | ForEach-Object { $_.ToString('x2') })
+[Environment]::SetEnvironmentVariable('TAIGA_MCP_TOKEN', $token, 'User')
+
+New-Item -ItemType Directory -Force "$HOME\.secrets" | Out-Null
+@"
+TAIGA_URL=https://api.taiga.io/api/v1
+TAIGA_USERNAME=your-taiga-username
+TAIGA_PASSWORD=your-taiga-password
+TAIGA_AUTH_METHOD=password
+MCP_AUTH_TOKEN=$token
+"@ | Set-Content -Encoding ascii "$HOME\.secrets\taiga.env"
+icacls "$HOME\.secrets\taiga.env" /inheritance:r /grant:r "${env:USERNAME}:F"
+notepad "$HOME\.secrets\taiga.env"
+```
+
+In Notepad, replace the username and password, then save. Use `https://api.taiga.io/api/v1` for Taiga cloud. `tree.taiga.io` is the website, not the API.
+
+### 3. Start the server
+
+```powershell
+docker run -d --name taiga-mcp --restart unless-stopped `
+  -p 127.0.0.1:5000:8080 `
+  --env-file "$HOME\.secrets\taiga.env" `
+  taiga-mcp:local
+
+curl.exe http://127.0.0.1:5000/health/ready
+```
+
+You should see `{"status":"Healthy"}`.
+
+### 4. Block the risky tools
+
+Add this to `permissions.deny` in `~/.claude/settings.json`, merging it with anything already there. It stops Claude from reading your credentials file and leaves it with read tools plus story, task and issue updates.
+
+<details>
+<summary>Block list (46 entries)</summary>
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "Read(~/.secrets/**)",
+      "Edit(~/.secrets/**)",
+      "Write(~/.secrets/**)",
+      "mcp__taiga__taiga_bulk_create_epics",
+      "mcp__taiga__taiga_bulk_create_memberships",
+      "mcp__taiga__taiga_bulk_create_tasks",
+      "mcp__taiga__taiga_bulk_create_userstories",
+      "mcp__taiga__taiga_create_epic",
+      "mcp__taiga__taiga_create_epic_related_userstory",
+      "mcp__taiga__taiga_create_issue",
+      "mcp__taiga__taiga_create_membership",
+      "mcp__taiga__taiga_create_project",
+      "mcp__taiga__taiga_create_role",
+      "mcp__taiga__taiga_create_task",
+      "mcp__taiga__taiga_create_userstory",
+      "mcp__taiga__taiga_delete_epic",
+      "mcp__taiga__taiga_delete_epic_related_userstory",
+      "mcp__taiga__taiga_delete_issue",
+      "mcp__taiga__taiga_delete_membership",
+      "mcp__taiga__taiga_delete_project",
+      "mcp__taiga__taiga_delete_role",
+      "mcp__taiga__taiga_delete_task",
+      "mcp__taiga__taiga_delete_user",
+      "mcp__taiga__taiga_delete_userstory",
+      "mcp__taiga__taiga_leave_project",
+      "mcp__taiga__taiga_like_project",
+      "mcp__taiga__taiga_register_user",
+      "mcp__taiga__taiga_request_password_recovery",
+      "mcp__taiga__taiga_resend_invitation",
+      "mcp__taiga__taiga_unlike_project",
+      "mcp__taiga__taiga_unvote_userstory",
+      "mcp__taiga__taiga_unwatch_epic",
+      "mcp__taiga__taiga_unwatch_issue",
+      "mcp__taiga__taiga_unwatch_task",
+      "mcp__taiga__taiga_unwatch_userstory",
+      "mcp__taiga__taiga_update_epic",
+      "mcp__taiga__taiga_update_membership",
+      "mcp__taiga__taiga_update_project",
+      "mcp__taiga__taiga_update_role",
+      "mcp__taiga__taiga_update_user",
+      "mcp__taiga__taiga_vote_epic",
+      "mcp__taiga__taiga_vote_userstory",
+      "mcp__taiga__taiga_watch_epic",
+      "mcp__taiga__taiga_watch_issue",
+      "mcp__taiga__taiga_watch_task",
+      "mcp__taiga__taiga_watch_userstory"
+    ]
+  }
+}
+```
+
+</details>
+
+### 5. Connect Claude Code
+
+Close and reopen your terminal or VS Code so it picks up `TAIGA_MCP_TOKEN`, then run:
+
+```powershell
+claude mcp add --transport http --scope user taiga http://127.0.0.1:5000/ --header 'X-Api-Key: ${TAIGA_MCP_TOKEN}'
+```
+
+Keep the single quotes, so the variable name is stored and not the token. Start `claude` and check that `/mcp` shows `taiga` as connected.
+
+### 6. Test it
+
+Create a throwaway ticket in Taiga, then ask Claude, using your project's slug from the ticket URL:
+
+> Read user story #123 in project `your-project-slug` and its comments. Move it to In progress with a short comment, then read it back to confirm.
+
+The change appears under your name, because the server uses your login.
+
+### Troubleshooting
+
+| Problem | Fix |
+| ------- | --- |
+| `405` from Taiga | `TAIGA_URL` points at `tree.taiga.io`. Change it to `https://api.taiga.io/api/v1`, then recreate the container. |
+| `Dynamic Client Registration rejected (HTTP 401)` | The terminal doesn't have the token. Run `$env:TAIGA_MCP_TOKEN = [Environment]::GetEnvironmentVariable('TAIGA_MCP_TOKEN', 'User')`, then `claude --continue`. |
+| Changes to `taiga.env` have no effect | The file is read when the container is created. Run `docker rm -f taiga-mcp`, then repeat step 3. |
+| Tools fail after a server restart | Run `/mcp` in Claude Code and reconnect `taiga`. |
+
+### Before Deploying For The Team
+
+The local setup doesn't carry over to a shared server as is:
+
+- **The block list only protects one person's Claude Code.** Anyone with the MCP token could still call `taiga_delete_project` on a shared server, so the blocked tools must be removed from the server itself.
+- **One deployed login puts every change under one name.** Keeping each person's name needs per-user Taiga credentials, which the server doesn't support yet.
+- **`/health` and `/metrics` have no token.** Keep them off the public network.
+- **Plain HTTP isn't safe across a network.** Put the server behind HTTPS.
+
+## Key Features
+
+- **75 MCP tools** — Projects, User Stories, Tasks, Issues, Comments, Epics, Roles, Users, Memberships/Invitations.
+- **Taiga authentication** — username/password login, a ready-made token, a refresh token, and a cookie session (for SSO).
+- **Optimistic concurrency control (OCC)** — the `version` parameter when updating objects.
+- **Pagination control** — the `x-disable-pagination` header.
+- **Resilience** — automatic retries on 408/429/5xx and network failures with exponential backoff.
+- **Corporate/self-signed certificates** — certificate pinning or a trusted root CA.
+- **MCP endpoint protection** — a shared token (`X-Api-Key`/`Bearer`), compared in constant time.
+- **Configurable listen address and port** (the `Server` section).
+- **Health endpoints** — `/health`, `/health/live`, `/health/ready`.
+- **Audit log** of destructive tool calls (ILogger + JSON Lines file with rotation).
+- **Rate limiting** for the MCP endpoint (key: token or client IP).
+- **Prometheus metrics** (`/metrics`) — RPS, latency, and error rate of tool calls.
+- **Graceful shutdown** and shutdown on critical errors.
+- **Configuration via ENV** — any setting can be overridden by an environment variable.
+- **Docker** — a multi-stage `Dockerfile`: app in `/opt/mcp`, runs as non-root (`app`, UID 1654), parameters via ENV, config and certificates via mounts.
+- **Unit tests** (xUnit).
+
+## Requirements
+
+- [.NET SDK 8.0](https://dotnet.microsoft.com/download) or newer (the project targets `net8.0`).
+- Access to a Taiga instance over its REST API (`/api/v1`).
+
+## Quick Start
+
+```powershell
+# Build
 dotnet build .\TaigaMcp.csproj -c Release
 
-# Запуск (по умолчанию слушает 0.0.0.0:5000)
+# Run (listens on 127.0.0.1:5000 by default)
 dotnet run --project .\TaigaMcp.csproj
 
-# Unit-тесты
+# Unit tests
 dotnet test .\tests\TaigaMcp.Tests\TaigaMcp.Tests.csproj
 ```
 
-Проверка работоспособности:
+Health check:
 
 ```powershell
-curl http://127.0.0.1:5000/health         # -> ok (общая проверка)
-curl http://127.0.0.1:5000/health/live    # -> ok (процесс жив)
-curl http://127.0.0.1:5000/health/ready   # -> {"status":"Healthy"} (доступ к Taiga API)
+curl http://127.0.0.1:5000/health         # -> ok (general)
+curl http://127.0.0.1:5000/health/live    # -> ok (process alive)
+curl http://127.0.0.1:5000/health/ready   # -> {"status":"Healthy"} (Taiga API reachable)
 ```
 
-MCP-эндпоинт — корень приложения: `http://127.0.0.1:5000/`.
+The MCP endpoint is the application root: `http://127.0.0.1:5000/`.
 
-## Архитектура
+## Architecture
 
-```
-TaigaMcp.csproj              # Проект net8.0 + пакеты MCP SDK
-Program.cs                   # Точка входа: конфигурация, DI, HTTP-транспорт, защита эндпоинта
-appsettings.json             # Базовые настройки (без секретов)
-appsettings.Local.json       # Локальные секреты (не коммитится; монтируется в Docker)
+```text
+TaigaMcp.csproj              # net8.0 project + MCP SDK packages
+Program.cs                   # Entry point: configuration, DI, HTTP transport, endpoint protection
+appsettings.json             # Base settings (no secrets)
 Configuration/
-  TaigaOptions.cs            # Модель настроек подключения
-  ServerOptions.cs           # Адрес и порт прослушивания
-  AuditOptions.cs            # Настройки аудит-лога
-  MetricsOptions.cs          # Настройки метрик Prometheus
-  RateLimitOptions.cs        # Настройки ограничения частоты запросов
-  ShutdownOptions.cs         # Настройки корректного завершения
-  HealthOptions.cs           # Настройки health/readiness
+  TaigaOptions.cs            # Connection settings model
+  ServerOptions.cs           # Listen address and port
+  AuditOptions.cs            # Audit log settings
+  MetricsOptions.cs          # Prometheus metrics settings
+  RateLimitOptions.cs        # Rate limiting settings
+  ShutdownOptions.cs         # Graceful shutdown settings
+  HealthOptions.cs           # Health/readiness settings
 Health/
-  HealthChecks.cs            # Логика проверок готовности/живости
-  HealthEndpoints.cs         # Регистрация /health, /health/live, /health/ready
-  ReadinessProbe.cs          # Кэширующая проверка readiness (single-flight)
+  HealthChecks.cs            # Readiness/liveness checks
+  HealthEndpoints.cs         # Registers /health, /health/live, /health/ready
+  ReadinessProbe.cs          # Caching readiness probe (single-flight)
 Hosting/
-  GracefulShutdown.cs        # Корректное завершение и реакция на критические ошибки
+  GracefulShutdown.cs        # Graceful shutdown and critical-error handling
 Logging/
-  AuditLogger.cs             # Аудит-лог деструктивных инструментов (+ ротация)
+  AuditLogger.cs             # Audit log of destructive tools (+ rotation)
 Metrics/
-  McpMetrics.cs              # Метрики Prometheus (RPS, latency, error rate)
-  ToolNameResolver.cs        # Определение имени инструмента по методу
+  McpMetrics.cs              # Prometheus metrics (RPS, latency, error rate)
+  ToolNameResolver.cs        # Maps a method to the tool name
 Security/
-  RateLimitSetup.cs          # Rate limiting (partition по токену/IP)
+  RateLimitSetup.cs          # Rate limiting (partition by token/IP)
 Taiga/
-  TaigaClient.cs             # Обёртка REST API: авторизация, повторы, пагинация, форматирование
-  TaigaAuthStore.cs          # Singleton-кэш токенов
-  TaigaHttpHandlerFactory.cs # Обработка TLS (pinning / доверенный ЦС / отключение проверки)
-  TaigaApiException.cs       # Ошибки Taiga API
-  JsonBody.cs                # Построитель JSON-тел запросов
+  TaigaClient.cs             # REST API wrapper: auth, retries, pagination, formatting
+  TaigaAuthStore.cs          # Singleton token cache
+  TaigaHttpHandlerFactory.cs # TLS handling (pinning / trusted CA / disabled validation)
+  TaigaApiException.cs       # Taiga API errors
+  JsonBody.cs                # JSON request body builder
 Tools/
-  TaigaToolBase.cs           # Базовый класс инструментов (+ аудит, метрики)
-  *Tools.cs                  # 8 наборов MCP-инструментов
-certs/                       # Сертификаты (напр. для pinning)
+  TaigaToolBase.cs           # Base tool class (+ audit, metrics)
+  *Tools.cs                  # 9 groups of MCP tools
+certs/                       # Certificates (e.g. for pinning)
 tests/
-  TaigaMcp.Tests/            # Unit-тесты (xUnit)
-Dockerfile                   # Образ: /opt/mcp, запуск от non-root (app)
-.dockerignore                # Что не попадает в контекст сборки (секреты, certs, tests)
-global.json                  # Pin версии .NET SDK
+  TaigaMcp.Tests/            # Unit tests (xUnit)
+Dockerfile                   # Image: /opt/mcp, runs as non-root (app)
+.dockerignore                # What stays out of the build context (secrets, certs, tests)
+global.json                  # Pins the .NET SDK version
 ```
 
-## Инструменты (72)
+## Tools (75)
 
 ### Projects (10)
 
-`taiga_list_projects`, `taiga_get_project`, `taiga_get_project_by_slug`, `taiga_create_project`, `taiga_update_project`, `taiga_delete_project`, `taiga_get_project_stats`, `taiga_leave_project`, `taiga_like_project`, `taiga_unlike_project`
+`taiga_list_projects`, `taiga_get_project`, `taiga_get_project_by_slug`, `taiga_create_project`,
+`taiga_update_project`, `taiga_delete_project`, `taiga_get_project_stats`, `taiga_leave_project`,
+`taiga_like_project`, `taiga_unlike_project`
 
 ### User Stories (11)
 
-`taiga_list_userstories`, `taiga_get_userstory`, `taiga_get_userstory_by_ref`, `taiga_create_userstory`, `taiga_update_userstory`, `taiga_delete_userstory`, `taiga_bulk_create_userstories`, `taiga_vote_userstory`,`taiga_unvote_userstory`, `taiga_watch_userstory`, `taiga_unwatch_userstory`
+`taiga_list_userstories`, `taiga_get_userstory`, `taiga_get_userstory_by_ref`, `taiga_create_userstory`,
+`taiga_update_userstory`, `taiga_delete_userstory`, `taiga_bulk_create_userstories`, `taiga_vote_userstory`,
+`taiga_unvote_userstory`, `taiga_watch_userstory`, `taiga_unwatch_userstory`
 
 ### Tasks (9)
 
-`taiga_list_tasks`, `taiga_get_task`, `taiga_get_task_by_ref`, `taiga_create_task`, `taiga_update_task`, `taiga_delete_task`, `taiga_bulk_create_tasks`, `taiga_watch_task`, `taiga_unwatch_task`
+`taiga_list_tasks`, `taiga_get_task`, `taiga_get_task_by_ref`, `taiga_create_task`, `taiga_update_task`,
+`taiga_delete_task`, `taiga_bulk_create_tasks`, `taiga_watch_task`, `taiga_unwatch_task`
 
 ### Issues (8)
 
-`taiga_list_issues`, `taiga_get_issue`, `taiga_get_issue_by_ref`, `taiga_create_issue`, `taiga_update_issue`, `taiga_delete_issue`, `taiga_watch_issue`, `taiga_unwatch_issue`
+`taiga_list_issues`, `taiga_get_issue`, `taiga_get_issue_by_ref`, `taiga_create_issue`, `taiga_update_issue`,
+`taiga_delete_issue`, `taiga_watch_issue`, `taiga_unwatch_issue`
+
+### Comments (3, read-only)
+
+`taiga_list_userstory_comments`, `taiga_list_task_comments`, `taiga_list_issue_comments`
+
+These take the ticket's internal `id`, not its `#ref`.
 
 ### Epics (13)
 
-`taiga_list_epics`, `taiga_get_epic`, `taiga_get_epic_by_ref`, `taiga_create_epic`, `taiga_update_epic`, `taiga_delete_epic`, `taiga_bulk_create_epics`, `taiga_list_epic_related_userstories`, `taiga_create_epic_related_userstory`, `taiga_delete_epic_related_userstory`, `taiga_vote_epic`, `taiga_watch_epic`, `taiga_unwatch_epic`
+`taiga_list_epics`, `taiga_get_epic`, `taiga_get_epic_by_ref`, `taiga_create_epic`, `taiga_update_epic`,
+`taiga_delete_epic`, `taiga_bulk_create_epics`, `taiga_list_epic_related_userstories`,
+`taiga_create_epic_related_userstory`, `taiga_delete_epic_related_userstory`, `taiga_vote_epic`,
+`taiga_watch_epic`, `taiga_unwatch_epic`
 
 ### Roles (5)
 
@@ -134,108 +307,110 @@ global.json                  # Pin версии .NET SDK
 
 ### Users (8)
 
-`taiga_list_users`, `taiga_get_user`, `taiga_get_current_user`, `taiga_register_user`, `taiga_update_user`,`taiga_delete_user`, `taiga_list_user_contacts`, `taiga_request_password_recovery`
+`taiga_list_users`, `taiga_get_user`, `taiga_get_current_user`, `taiga_register_user`, `taiga_update_user`,
+`taiga_delete_user`, `taiga_list_user_contacts`, `taiga_request_password_recovery`
 
 ### Memberships / Invitations (8)
 
-`taiga_list_memberships`, `taiga_get_membership`, `taiga_create_membership`, `taiga_bulk_create_memberships`, `taiga_update_membership`, `taiga_delete_membership`, `taiga_resend_invitation`, `taiga_get_invitation`
+`taiga_list_memberships`, `taiga_get_membership`, `taiga_create_membership`, `taiga_bulk_create_memberships`,
+`taiga_update_membership`, `taiga_delete_membership`, `taiga_resend_invitation`, `taiga_get_invitation`
 
-## Конфигурация
+## Configuration
 
-Настройки читаются в порядке возрастания приоритета:
+Settings are read in increasing order of precedence:
 
-1. `appsettings.json` — базовые значения (без секретов);
-2. `appsettings.Local.json` — необязательный локальный файл с секретами (в `.gitignore`);
-3. переменные окружения.
+1. `appsettings.json` — base values (no secrets);
+2. `appsettings.Local.json` — optional local file with secrets (listed in `.gitignore`);
+3. environment variables.
 
-### Секция `Server`
+### `Server` section
 
-| Ключ | По умолчанию | Описание |
-|------|--------------|----------|
-| `Host` | `0.0.0.0` | Адрес прослушивания: `0.0.0.0` — все интерфейсы, `127.0.0.1`/`localhost` — только локально, либо конкретный IP. |
-| `Port` | `5000` | Порт прослушивания. |
+| Key | Default | Description |
+| ----- | --------- | ------------- |
+| `Host` | `127.0.0.1` | Listen address: `127.0.0.1`/`localhost` for local only, `0.0.0.0` for all interfaces, or a specific IP. |
+| `Port` | `5000` | Listen port. |
 
-### Секция `Taiga`
+### `Taiga` section
 
-| Ключ | По умолчанию | Описание |
-|------|--------------|----------|
-| `BaseUrl` | `https://api.taiga.io/api/v1` | Базовый адрес API Taiga. |
-| `Username` | — | Логин или email. |
-| `Password` | — | Пароль. |
-| `Token` | — | Готовый `auth_token` (вариант для SSO). |
-| `RefreshToken` | — | Refresh-токен. |
-| `AuthMethod` | `auto` | `auto` \| `password` \| `token` \| `cookie` (см. ниже). |
-| `AuthScheme` | `Bearer` | Схема заголовка `Authorization` (`Bearer` или `Application`). |
-| `Cookie` | — | Значение заголовка `Cookie` для режима `cookie`. |
-| `CaCertificatePath` | — | Путь к сертификату (pinning/корневой ЦС). Относительный путь — от каталога сборки. |
-| `IgnoreSslErrors` | `false` | Полностью отключить проверку TLS-сертификата (крайняя мера). |
-| `DisablePaginationByDefault` | `true` | Отключать пагинацию (заголовок `x-disable-pagination`). |
-| `TimeoutSeconds` | `30` | Таймаут HTTP-запросов к Taiga (сек). |
-| `MaxRetries` | `3` | Число повторов при временных сбоях. |
-| `RetryBaseDelayMs` | `500` | Базовая задержка повтора (мс), растёт экспоненциально. |
+| Key | Default | Description |
+| ----- | --------- | ------------- |
+| `BaseUrl` | `https://api.taiga.io/api/v1` | Taiga API base URL. |
+| `Username` | — | Username or email. |
+| `Password` | — | Password. |
+| `Token` | — | Ready-made `auth_token` (SSO-friendly option). |
+| `RefreshToken` | — | Refresh token. |
+| `AuthMethod` | `auto` | `auto` \| `password` \| `token` \| `cookie` (see below). |
+| `AuthScheme` | `Bearer` | `Authorization` header scheme (`Bearer` or `Application`). |
+| `Cookie` | — | Value of the `Cookie` header for the `cookie` mode. |
+| `CaCertificatePath` | — | Path to a certificate (pinning / root CA). A relative path resolves against the assembly directory. |
+| `IgnoreSslErrors` | `false` | Fully disable TLS certificate validation (last resort). |
+| `DisablePaginationByDefault` | `true` | Disable pagination (the `x-disable-pagination` header). |
+| `TimeoutSeconds` | `30` | Taiga HTTP request timeout (sec). |
+| `MaxRetries` | `3` | Number of retries on transient failures. |
+| `RetryBaseDelayMs` | `500` | Base retry delay (ms), grows exponentially. |
 
-### Секция `Mcp`
+### `Mcp` section
 
-| Ключ | Описание |
-|------|----------|
-| `AuthToken` | Общий токен для доступа к MCP-эндпоинту. Если пуст — эндпоинт не защищён (только для локальной работы). |
+| Key | Description |
+| ----- | ------------- |
+| `AuthToken` | Shared token that guards the MCP endpoint. If empty, the endpoint is unprotected (local use only). |
 
-### Секция `Audit`
+### `Audit` section
 
-| Ключ | По умолчанию | Описание |
-|------|--------------|----------|
-| `Enabled` | `true` | Включён ли аудит-лог деструктивных инструментов. |
-| `FilePath` | `logs/audit.log` | Файл аудит-лога (JSON Lines). Если пусто — запись только в ILogger (категория `TaigaMcp.Audit`). Относительный путь — от каталога сборки. |
-| `MaxFileSizeMB` | `64` | Максимальный размер файла в МБ до ротации; `0` — ротация отключена. |
-| `MaxBackupFiles` | `5` | Число архивных копий (`audit.log.1` … `audit.log.N`); самая старая удаляется. |
+| Key | Default | Description |
+| ----- | --------- | ------------- |
+| `Enabled` | `true` | Whether the audit log of destructive tools is enabled. |
+| `FilePath` | `logs/audit.log` | Audit log file (JSON Lines). If empty, entries go to ILogger only (category `TaigaMcp.Audit`). A relative path is resolved from the build directory. |
+| `MaxFileSizeMB` | `64` | Max audit file size in MB before rotation. `0` disables rotation. |
+| `MaxBackupFiles` | `5` | Number of rotated backups (`audit.log.1` … `audit.log.N`); the oldest is deleted. |
 
-### Секция `Metrics`
+### `Metrics` section
 
-| Ключ | По умолчанию | Описание |
-|------|--------------|----------|
-| `Enabled` | `true` | Включён ли сбор и экспорт метрик Prometheus. |
-| `Path` | `/metrics` | Путь, по которому отдаются метрики. Эндпоинт не защищён токеном MCP. |
+| Key | Default | Description |
+| ----- | --------- | ------------- |
+| `Enabled` | `true` | Whether Prometheus metrics collection and export is enabled. |
+| `Path` | `/metrics` | Path that serves the metrics. The endpoint is not protected by the MCP token. |
 
-Экспортируемые метрики вызовов инструментов:
+Exported tool-call metrics:
 
-| Метрика | Тип | Назначение |
-|---------|-----|------------|
-| `taiga_mcp_tool_requests_total{tool,status}` | counter | RPS (всего вызовов инструментов). |
-| `taiga_mcp_tool_errors_total{tool}` | counter | Error rate (число ошибок). |
-| `taiga_mcp_tool_request_duration_seconds{tool}` | histogram | Latency (длительность вызова). |
+| Metric | Type | Purpose |
+| -------- | ------ | --------- |
+| `taiga_mcp_tool_requests_total{tool,status}` | counter | RPS (total tool calls). |
+| `taiga_mcp_tool_errors_total{tool}` | counter | Error rate (number of errors). |
+| `taiga_mcp_tool_request_duration_seconds{tool}` | histogram | Latency (call duration). |
 
-`UseHttpMetrics` дополнительно отдаёт стандартные HTTP-метрики (`http_requests_received_total`, `http_request_duration_seconds`, ...).
+`UseHttpMetrics` additionally exposes standard HTTP metrics (`http_requests_received_total`, `http_request_duration_seconds`, ...).
 
-### Секция `RateLimit`
+### `RateLimit` section
 
-| Ключ | По умолчанию | Описание |
-|------|--------------|----------|
-| `Enabled` | `true` | Включено ли ограничение частоты запросов. |
-| `PermitLimit` | `120` | Максимум запросов за окно на ключ (токен или IP). |
-| `WindowSeconds` | `60` | Длительность окна в секундах. |
-| `QueueLimit` | `0` | Размер очереди ожидания; `0` — запросы сверх лимита сразу получают `429`. |
+| Key | Default | Description |
+| ----- | --------- | ------------- |
+| `Enabled` | `true` | Whether request rate limiting is enabled. |
+| `PermitLimit` | `120` | Max requests per window per key (token or IP). |
+| `WindowSeconds` | `60` | Window size in seconds. |
+| `QueueLimit` | `0` | Queue length beyond the limit; `0` means excess requests are rejected immediately (429). |
 
-Ключ партиционирования — токен доступа (стабильный хеш) или IP клиента. Health- и metrics-эндпоинты под ограничение не попадают. При превышении возвращается `429 Too Many Requests` с заголовком `Retry-After`.
+The partition key is the access token (stable hash) or the client IP. Health and metrics endpoints are exempt. When the limit is exceeded, `429 Too Many Requests` is returned with a `Retry-After` header.
 
-### Секция `Shutdown`
+### `Shutdown` section
 
-| Ключ | По умолчанию | Описание |
-|------|--------------|----------|
-| `ShutdownTimeoutSeconds` | `30` | Сколько секунд ждать завершения текущих запросов при остановке. |
-| `ShutdownOnUnhandledException` | `true` | Инициировать корректную остановку при необработанном исключении. |
+| Key | Default | Description |
+| ----- | --------- | ------------- |
+| `ShutdownTimeoutSeconds` | `30` | How long to wait for in-flight requests to finish on shutdown. |
+| `ShutdownOnUnhandledException` | `true` | Trigger a graceful shutdown on an unhandled exception. |
 
-### Секция `Health`
+### `Health` section
 
-| Ключ | По умолчанию | Описание |
-|------|--------------|----------|
-| `ReadyCacheSeconds` | `60` | Интервал кэширования результата `/health/ready` в секундах. Реальный запрос к Taiga выполняется не чаще одного раза за интервал; `0` — проверять при каждом запросе. |
+| Key | Default | Description |
+| ----- | --------- | ------------- |
+| `ReadyCacheSeconds` | `60` | Cache interval in seconds for the `/health/ready` result. The real request to Taiga runs at most once per interval; `0` checks on every request. |
 
-### Переменные окружения
+### Environment variables
 
-Переопределяют соответствующие настройки:
+They override the corresponding settings:
 
-| Переменная | Аналог в конфиге |
-|------------|------------------|
+| Variable | Config equivalent |
+| ---------- | ------------------- |
 | `MCP_HOST` | `Server:Host` |
 | `MCP_PORT` | `Server:Port` |
 | `MCP_AUTH_TOKEN` | `Mcp:AuthToken` |
@@ -265,12 +440,12 @@ global.json                  # Pin версии .NET SDK
 | `TAIGA_MAX_RETRIES` | `Taiga:MaxRetries` |
 | `TAIGA_RETRY_DELAY_MS` | `Taiga:RetryBaseDelayMs` |
 
-### Пример `appsettings.Local.json`
+### Example `appsettings.Local.json`
 
 ```json
 {
   "Mcp": {
-    "AuthToken": "<сгенерируйте случайный токен>"
+    "AuthToken": "<generate a random token>"
   },
   "Taiga": {
     "BaseUrl": "https://taiga.example.local/api/v1",
@@ -282,31 +457,31 @@ global.json                  # Pin версии .NET SDK
 }
 ```
 
-## Авторизация в Taiga
+## Taiga Authentication
 
-`AuthMethod` определяет способ получения токена:
+`AuthMethod` determines how the token is obtained:
 
-- `auto` (по умолчанию) — сначала заданный `Token`, затем `RefreshToken`, затем вход по `Username`/`Password`;
-- `password` — всегда выполнять вход по логину/паролю;
-- `token` — использовать только заданный `Token` (вход по API не выполняется; удобно при SSO — токен берётся из открытой сессии Taiga);
-- `cookie` — отправлять заголовок `Cookie` (сессия SSO/прокси), `Authorization` не используется.
+- `auto` (default) — first the configured `Token`, then `RefreshToken`, then username/password login;
+- `password` — always log in with username/password;
+- `token` — use only the configured `Token` (no API login; handy for SSO, where the token comes from an open Taiga session);
+- `cookie` — send the `Cookie` header (SSO/proxy session); `Authorization` is not used.
 
-Токен кэшируется в одном месте (singleton) и переиспользуется между вызовами; при `401` выполняется
-одно автоматическое обновление (refresh или повторный вход).
+The token is cached in a single place (a singleton) and reused across calls; on `401` a single automatic
+refresh (token refresh or re-login) is performed.
 
-## Корпоративный / самоподписанный сертификат
+## Corporate / Self-Signed Certificate
 
-Если серверу Taiga не доверяет ОС, используйте один из вариантов:
+If the OS does not trust the Taiga server certificate, use one of the following:
 
-1. **Pinning сертификата** (предпочтительно): положите сертификат сервера (PEM/DER/PFX) и укажите `CaCertificatePath`.
-   Проверка проходит при точном совпадении отпечатка, а если это корневой ЦС — по цепочке.
-2. **Отключение проверки**: `IgnoreSslErrors=true`. Небезопасно (риск MITM), только для доверенной сети.
+1. **Certificate pinning** (preferred): provide the server certificate (PEM/DER/PFX) and set `CaCertificatePath`.
+   Validation succeeds on an exact thumbprint match; if the file is a root CA, the chain is validated instead.
+2. **Disable validation**: `IgnoreSslErrors=true`. Insecure (MITM risk), for trusted networks only.
 
-Новую версию сертификата нужно подкладывать при ротации.
+A renewed certificate must be provided when it is rotated.
 
-## Подключение MCP-клиента
+## Connecting an MCP Client
 
-Пример конфигурации (точная схема зависит от клиента; транспорт — Streamable HTTP):
+Example configuration (the exact schema depends on the client; the transport is Streamable HTTP):
 
 ```json
 {
@@ -320,109 +495,107 @@ global.json                  # Pin версии .NET SDK
 }
 ```
 
-Если `Mcp:AuthToken` задан, передавайте его в заголовке `X-Api-Key` (или `Authorization: Bearer <token>`).
-Без токена запросы к MCP получают `401`. Health-эндпоинты (`/health*`) всегда открыты.
+If `Mcp:AuthToken` is set, pass it in the `X-Api-Key` header (or `Authorization: Bearer <token>`).
+Without the token, MCP requests receive `401`. The health endpoints are always open.
 
-## Health-эндпоинты
+## Health Checks
 
-| Эндпоинт | Назначение | Ответ |
-|----------|------------|-------|
-| `/health` | Общая проверка (совместимость). | `ok` |
-| `/health/live` | Liveness: процесс жив и отвечает. | `ok` |
-| `/health/ready` | Readiness: настроен доступ к Taiga API. Результат кэшируется (`Health:ReadyCacheSeconds`, по умолчанию 60 с), реальный запрос `users/me` выполняется не чаще этого интервала. | `{"status":"Healthy"}` (200) или `{"status":"Unhealthy","reason":"..."}` (503) |
+| Endpoint | Purpose | Response |
+| ---------- | --------- | ---------- |
+| `/health` | General check (backwards compatible). | `ok` |
+| `/health/live` | Liveness: the process is alive and responding. | `ok` |
+| `/health/ready` | Readiness: configured and can reach the Taiga API. The result is cached (`Health:ReadyCacheSeconds`, 60 s by default), so the real `users/me` request runs at most once per interval. | `{"status":"Healthy"}` or `{"status":"Unhealthy","reason":"..."}` (HTTP 503). |
 
-Все health-эндпоинты не защищены токеном MCP и не относятся к MCP.
+The health endpoints are not protected by the MCP token and are not part of MCP.
 
-## Метрики и ограничение частоты
+## Metrics and Rate Limiting
 
-- `GET /metrics` отдаёт метрики в формате Prometheus (значение `Metrics:Path`). Эндпоинт открыт (как и health) и не требует токена; при необходимости ограничьте к нему сетевой доступ.
-- Запросы к MCP-эндпоинту ограничиваются политикой `RateLimit` (см. секцию выше): ключ — токен (`X-Api-Key`/`Bearer`) или IP клиента. При превышении возвращается `429` и заголовок `Retry-After`.
+- `GET /metrics` serves Prometheus-format metrics (the `Metrics:Path` value). Like health, the endpoint is open and requires no token; restrict network access to it if needed.
+- Requests to the MCP endpoint are limited by the `RateLimit` policy (see above): the key is the token (`X-Api-Key`/`Bearer`) or the client IP. When exceeded, `429` with a `Retry-After` header is returned.
 
-## Завершение работы
+## Shutdown
 
-- По `SIGTERM`/`Ctrl+C` сервер корректно завершается, дожидаясь текущих запросов не дольше `Shutdown:ShutdownTimeoutSeconds` (по умолчанию 30 сек).
-- При необработанном исключении (если `Shutdown:ShutdownOnUnhandledException=true`) в лог пишется `Critical` и инициируется корректная остановка.
+- On `SIGTERM`/`Ctrl+C` the server shuts down gracefully, waiting for in-flight requests no longer than `Shutdown:ShutdownTimeoutSeconds` (30 sec by default).
+- On an unhandled exception (when `Shutdown:ShutdownOnUnhandledException=true`) a `Critical` entry is logged and a graceful shutdown is triggered.
 
 ## Docker
 
-Образ устанавливает приложение в `/opt/mcp` и запускает его от непривилегированного пользователя `app` (UID 1654), а не от root. Параметры запуска задаются переменными окружения; конфигурация и сертификаты монтируются как файлы.
+The image installs the app in `/opt/mcp` and runs it as the non-root `app` user (UID 1654). Startup parameters come from environment variables; configuration and certificates are mounted as files.
 
-Сборка:
+Build:
 
 ```bash
 docker build -t taiga-mcp:latest .
 ```
 
-Запуск — параметры через ENV/`--env-file`, конфиг и сертификат через монтирование:
+Run with parameters from `--env-file`:
 
 ```bash
 docker run -d --name taiga-mcp \
-  -p 8080:8080 \
+  -p 127.0.0.1:8080:8080 \
   --env-file .env \
-  -v "$PWD/appsettings.Local.json:/opt/mcp/appsettings.Local.json:ro" \
-  -v "$PWD/certs/taiga_leaf.pem:/opt/mcp/certs/taiga_leaf.pem:ro" \
   taiga-mcp:latest
 ```
 
-Минимальный `.env` (не коммитится):
+Minimal `.env` (not committed):
 
 ```dotenv
 MCP_AUTH_TOKEN=...
 TAIGA_URL=https://taiga.example.local/api/v1
 TAIGA_USERNAME=user
 TAIGA_PASSWORD=...
-TAIGA_CA_CERT_PATH=/opt/mcp/certs/taiga_leaf.pem
 ```
 
-Примечания:
+Notes:
 
-- `MCP_HOST`/`MCP_PORT` внутри образа по умолчанию `0.0.0.0`/`8080`; внешний порт публикуется через `-p`.
-- Каталог аудит-лога `/opt/mcp/logs` принадлежит пользователю `app`; при необходимости вынесите его на том: `-v taiga-logs:/opt/mcp/logs`.
-- Сертификат в образ не встраивается — монтируется при запуске. Если корпоративный сертификат не нужен, очистите `TAIGA_CA_CERT_PATH`.
-- Секреты в образ не попадают: `.dockerignore` исключает `appsettings.Local.json`, `.env` и `certs/`.
+- `MCP_HOST`/`MCP_PORT` default to `0.0.0.0`/`8080` inside the image; map the external port with `-p`.
+- The audit log directory `/opt/mcp/logs` is owned by the `app` user; put it on a volume if needed: `-v taiga-logs:/opt/mcp/logs`.
+- No certificate is needed for Taiga cloud. For a corporate certificate, mount it with `-v` and set `TAIGA_CA_CERT_PATH`.
+- No secrets are baked in: `.dockerignore` excludes `appsettings.Local.json`, `.env`, and `certs/`.
 
-## Безопасность
+## Security
 
-- Секреты храните в `appsettings.Local.json` (в `.gitignore`) или в переменных окружения / secret-manager. Не коммитьте их.
-- По умолчанию сервер слушает `0.0.0.0` (все интерфейсы). Обязательно задайте `Mcp:AuthToken`, если сервер доступен из сети; для локальной работы ограничьте адрес до `127.0.0.1`.
-- Предпочитайте pinning сертификата вместо `IgnoreSslErrors`.
-- Деструктивные инструменты (`taiga_delete_*`, `taiga_delete_epic_related_userstory`) записываются в аудит-лог (`Audit:FilePath`).
-- Ограничивайте частоту запросов к MCP-эндпоинту (секция `RateLimit`), чтобы защититься от перегрузки и подбора токена.
-- Эндпоинты `/health*` и `/metrics` открыты (без токена MCP) — при публикации сервера в сеть закройте их на уровне прокси/файрвола.
-- Учитывайте, что инструменты могут выполнять необратимые действия (`taiga_delete_*`, `taiga_register_user`,
-  `taiga_request_password_recovery`); выдавайте сервисной учётной записи Taiga минимально необходимые права.
+- Keep secrets in `appsettings.Local.json` (listed in `.gitignore`) or in environment variables / a secret manager. Never commit them.
+- The server listens on `127.0.0.1` by default, while the Docker image listens on `0.0.0.0` inside the container, so publish it with `-p 127.0.0.1:...`. Always set `Mcp:AuthToken`, and especially when the server is reachable from the network.
+- Prefer certificate pinning over `IgnoreSslErrors`.
+- Destructive tools (`taiga_delete_*`, `taiga_delete_epic_related_userstory`) are written to the audit log (`Audit:FilePath`).
+- Rate-limit the MCP endpoint (`RateLimit` section) to protect against overload and token guessing.
+- The `/health*` and `/metrics` endpoints are open (no MCP token) — restrict them at the proxy/firewall level when exposing the server to a network.
+- Be aware that tools can perform irreversible actions (`taiga_delete_*`, `taiga_register_user`,
+  `taiga_request_password_recovery`); grant the Taiga service account the minimum required permissions.
 
-## Ограничения
+## Limitations
 
-- Режим cookie-авторизации SSO не добавляет заголовок `X-CSRFToken` — для некоторых конфигураций может потребоваться доработка.
-- `/health/ready` не опрашивает Taiga при каждом запросе: результат кэшируется (`Health:ReadyCacheSeconds`, по умолчанию 60 с), поэтому частый polling не создаёт лишней нагрузки.
-- Rate limiting хранится в памяти процесса; при запуске нескольких экземпляров лимит действует отдельно для каждого.
-- CI (сборка пайплайнов) в проект не включён; unit-тесты запускаются вручную.
+- The SSO cookie auth mode does not add the `X-CSRFToken` header — some setups may require further work.
+- `/health/ready` does not poll Taiga on every request: the result is cached (`Health:ReadyCacheSeconds`, 60 s by default), so frequent polling causes no extra load.
+- Rate limiting is stored in process memory; with multiple instances the limit applies per instance.
+- No CI (build pipelines) is included; unit tests are run manually.
 
-## Тестирование
+## Testing
 
-Проект `tests/TaigaMcp.Tests` покрывает ключевые пути регрессионными тестами (xUnit, 75 тестов):
+The `tests/TaigaMcp.Tests` project covers key paths with regression tests (xUnit, 78 tests):
 
-- `ToolsTests` / `ToolsInvocationTests` — регистрация и вызовы всех 72 инструментов;
-- `TaigaClientTests` — авторизация (в т.ч. устойчивость к некорректному JSON), повторы, пагинация;
-- `TaigaHttpHandlerFactoryTests` — ранняя валидация и обработка сертификата (pinning);
-- `TaigaAuthStoreTests` — потокобезопасность кэша токенов;
-- `AuditLoggerTests` — запись и ротация аудит-лога;
-- `ReadinessProbeTests` — кэширование readiness (`ReadyCacheSeconds`);
+- `ToolsTests` / `ToolsInvocationTests` — registration and invocation of all 75 tools;
+- `CommentToolsTests` — reading ticket comments;
+- `TaigaClientTests` — authentication (including resilience to invalid JSON), retries, pagination;
+- `TaigaHttpHandlerFactoryTests` — early validation and certificate handling (pinning);
+- `TaigaAuthStoreTests` — thread safety of the token cache;
+- `AuditLoggerTests` — audit log writing and rotation;
+- `ReadinessProbeTests` — readiness caching (`ReadyCacheSeconds`);
 - `RateLimitSetupTests`, `MetricsTests`, `GracefulShutdownTests`, `HealthChecksTests`, `OptionsDefaultsTests`.
 
 ```bash
 dotnet test .\tests\TaigaMcp.Tests\TaigaMcp.Tests.csproj -c Release
 ```
 
-Сбор покрытия (coverlet):
+Collect coverage (coverlet):
 
 ```bash
 dotnet test .\tests\TaigaMcp.Tests\TaigaMcp.Tests.csproj -c Release \
   --collect:"XPlat Code Coverage" --results-directory .\TestResults
 ```
 
-## Технологии
+## Technologies
 
 - [.NET 8.0](https://dotnet.microsoft.com/)
 - [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
@@ -432,16 +605,16 @@ dotnet test .\tests\TaigaMcp.Tests\TaigaMcp.Tests.csproj -c Release \
 - [Microsoft.Extensions.Logging](https://learn.microsoft.com/dotnet/core/extensions/logging)
 - [System.Text.Json](https://learn.microsoft.com/dotnet/standard/serialization/system-text-json/)
 
-## Ссылки
+## Links
 
-- [Model Context Protocol](https://modelcontextprotocol.io/) — официальный сайт MCP
-- [Taiga REST API](https://docs.taiga.io/) — документация API Taiga
-- [.NET Documentation](https://learn.microsoft.com/dotnet/) — документация .NET
+- [Model Context Protocol](https://modelcontextprotocol.io/) — the official MCP site
+- [Taiga REST API](https://docs.taiga.io/) — Taiga API documentation
+- [.NET Documentation](https://learn.microsoft.com/dotnet/) — .NET documentation
 
-## Лицензия
+## License
 
-Проект распространяется под лицензией **MIT** — см. файл [LICENSE.txt](LICENSE.txt).
+This project is distributed under the **MIT** license — see [LICENSE.txt](LICENSE.txt).
 
 ---
 
-**Последнее обновление:** 2026
+**Last updated:** 2026
