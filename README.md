@@ -31,7 +31,7 @@ This runs the server in Docker on your machine, using your own Taiga login. Thes
 ### 1. Build the image
 
 ```powershell
-git clone -b chore/thrivo-safe-defaults https://github.com/Aminujb/taiga-mcp.git
+git clone https://github.com/Aminujb/taiga-mcp.git
 cd taiga-mcp
 docker build -t taiga-mcp:local .
 ```
