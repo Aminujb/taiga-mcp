@@ -1,20 +1,20 @@
 namespace TaigaMcp.Configuration;
 
 /// <summary>
-/// Настройки корректного завершения работы сервера.
-/// Берутся из секции "Shutdown" и могут быть переопределены переменными
+/// Graceful server shutdown settings.
+/// Read from the "Shutdown" section and can be overridden by environment variables
 /// SHUTDOWN_TIMEOUT_SECONDS / SHUTDOWN_ON_UNHANDLED_EXCEPTION.
 /// </summary>
 public sealed class ShutdownOptions
 {
     /// <summary>
-    /// Сколько секунд ждать завершения текущих запросов при остановке,
-    /// прежде чем прервать их принудительно.
+    /// How many seconds to wait for in-flight requests when stopping,
+    /// before ending them forcibly.
     /// </summary>
     public int ShutdownTimeoutSeconds { get; set; } = 30;
 
     /// <summary>
-    /// Инициировать корректную остановку сервера при необработанном исключении.
+    /// Start a graceful shutdown on an unhandled exception.
     /// </summary>
     public bool ShutdownOnUnhandledException { get; set; } = true;
 }

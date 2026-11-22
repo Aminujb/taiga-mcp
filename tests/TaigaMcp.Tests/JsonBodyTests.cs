@@ -29,7 +29,7 @@ public class JsonBodyTests
     [Fact]
     public void Object_DoesNotEscapeCyrillic()
     {
-        var obj = JsonBody.Object(("subject", "Тест"));
+        var obj = JsonBody.Object(("subject", "Café"));
         var options = new System.Text.Json.JsonSerializerOptions
         {
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
@@ -37,7 +37,7 @@ public class JsonBodyTests
 
         var json = obj.ToJsonString(options);
 
-        Assert.Contains("Тест", json);
+        Assert.Contains("Café", json);
     }
 
     [Fact]

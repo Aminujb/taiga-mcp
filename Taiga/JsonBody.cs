@@ -5,9 +5,9 @@ using System.Text.Json.Nodes;
 namespace TaigaMcp.Taiga;
 
 /// <summary>
-/// Вспомогательный построитель JSON-тел запросов.
-/// Позволяет удобно собирать объект и автоматически пропускает null-значения,
-/// чтобы не перезаписывать поля Taiga пустыми значениями при PATCH.
+/// Helper for building JSON request bodies.
+/// Builds an object conveniently and skips null values automatically,
+/// so PATCH requests don't overwrite Taiga fields with empty values.
 /// </summary>
 public static class JsonBody
 {
@@ -16,7 +16,7 @@ public static class JsonBody
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
-    /// <summary>Создаёт JsonObject из набора пар «имя — значение», пропуская null.</summary>
+    /// <summary>Creates a JsonObject from name/value pairs, skipping nulls.</summary>
     public static JsonObject Object(params (string Name, object? Value)[] items)
     {
         var obj = new JsonObject();
@@ -33,7 +33,7 @@ public static class JsonBody
         return obj;
     }
 
-    /// <summary>Преобразует произвольное значение в JsonNode.</summary>
+    /// <summary>Converts an arbitrary value to a JsonNode.</summary>
     public static JsonNode? ToNode(object? value)
     {
         if (value is null)

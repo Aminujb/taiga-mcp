@@ -8,9 +8,9 @@ using Xunit;
 namespace TaigaMcp.Tests;
 
 /// <summary>
-/// Прогоняет каждый зарегистрированный инструмент MCP с типовыми аргументами против
-/// поддельного HTTP-транспорта. Проверяет, что инструменты корректно строят запросы,
-/// обрабатывают ответ и всегда возвращают текстовый результат (без падения сервера).
+/// Runs every registered MCP tool with typical arguments against a
+/// fake HTTP transport. Checks that tools build requests correctly,
+/// handle the response and always return a text result (without crashing the server).
 /// </summary>
 public class ToolsInvocationTests
 {
@@ -70,6 +70,6 @@ public class ToolsInvocationTests
             executed++;
         }
 
-        Assert.Equal(72, executed);
+        Assert.Equal(75, executed);
     }
 }

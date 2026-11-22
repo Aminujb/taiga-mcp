@@ -32,12 +32,12 @@ public class ToolsTests
             FakeHttpMessageHandler.Json(HttpStatusCode.Created, """{"id":5}"""));
         var tools = new ProjectTools(harness.Client, harness.Audit, harness.Metrics);
 
-        var result = await tools.CreateProjectAsync("Проект", "Описание");
+        var result = await tools.CreateProjectAsync("Projet Été", "Résumé");
 
         var request = Assert.Single(harness.Handler.Requests);
         Assert.Equal(HttpMethod.Post, request.Method);
-        Assert.Contains("\"name\":\"Проект\"", request.Body, StringComparison.Ordinal);
-        Assert.Contains("\"description\":\"Описание\"", request.Body, StringComparison.Ordinal);
+        Assert.Contains("\"name\":\"Projet Été\"", request.Body, StringComparison.Ordinal);
+        Assert.Contains("\"description\":\"Résumé\"", request.Body, StringComparison.Ordinal);
         Assert.DoesNotContain("null", request.Body, StringComparison.Ordinal);
         Assert.Contains("\"id\": 5", result, StringComparison.Ordinal);
     }
@@ -49,7 +49,7 @@ public class ToolsTests
             FakeHttpMessageHandler.Json(HttpStatusCode.OK, """{"id":1}"""));
         var tools = new ProjectTools(harness.Client, harness.Audit, harness.Metrics);
 
-        await tools.UpdateProjectAsync(1, name: "Новое");
+        await tools.UpdateProjectAsync(1, name: "New");
 
         var request = Assert.Single(harness.Handler.Requests);
         Assert.Equal(HttpMethod.Patch, request.Method);
@@ -64,7 +64,7 @@ public class ToolsTests
 
         var result = await tools.GetProjectStatsAsync(3);
 
-        Assert.Contains("Ошибка Taiga API", result, StringComparison.Ordinal);
+        Assert.Contains("Taiga API error", result, StringComparison.Ordinal);
         Assert.Contains("403", result, StringComparison.Ordinal);
         Assert.Contains("nope", result, StringComparison.Ordinal);
 
@@ -104,7 +104,7 @@ public class ToolsTests
             .Where(x => x.Attribute is not null)
             .ToList();
 
-        Assert.Equal(72, tools.Count);
+        Assert.Equal(75, tools.Count);
         Assert.Equal(tools.Count, tools.Select(x => x.Attribute!.Name).Distinct(StringComparer.Ordinal).Count());
         Assert.All(tools, x => Assert.False(x.Method.IsStatic));
         Assert.All(tools, x => Assert.False(string.IsNullOrWhiteSpace(x.Attribute!.Name)));

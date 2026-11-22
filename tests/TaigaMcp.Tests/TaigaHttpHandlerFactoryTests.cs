@@ -41,13 +41,13 @@ public class TaigaHttpHandlerFactoryTests
     public void DamagedCertificate_ThrowsInvalidOperation()
     {
         var path = Path.Combine(Path.GetTempPath(), $"broken-{Guid.NewGuid():N}.pem");
-        File.WriteAllText(path, "это вовсе не сертификат");
+        File.WriteAllText(path, "this is not a certificate at all");
 
         try
         {
             var ex = Assert.Throws<InvalidOperationException>(
                 () => TaigaHttpHandlerFactory.Create(new TaigaOptions { CaCertificatePath = path }));
-            Assert.Contains("Не удалось загрузить сертификат", ex.Message, StringComparison.Ordinal);
+            Assert.Contains("Failed to load certificate", ex.Message, StringComparison.Ordinal);
         }
         finally
         {
@@ -66,7 +66,7 @@ public class TaigaHttpHandlerFactoryTests
         {
             var ex = Assert.Throws<InvalidOperationException>(
                 () => TaigaHttpHandlerFactory.Create(new TaigaOptions { CaCertificatePath = path }));
-            Assert.Contains("истёк", ex.Message, StringComparison.Ordinal);
+            Assert.Contains("expired", ex.Message, StringComparison.Ordinal);
         }
         finally
         {
@@ -172,7 +172,7 @@ public class TaigaHttpHandlerFactoryTests
             var validate = handler.ServerCertificateCustomValidationCallback;
             Assert.NotNull(validate);
 
-            // Ошибок нет — доверяем независимо от отпечатка.
+            // No errors, so it is trusted regardless of the thumbprint.
             var accepted = validate!(null!, null, null, SslPolicyErrors.None);
 
             Assert.True(accepted);

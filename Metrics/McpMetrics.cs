@@ -3,10 +3,10 @@ using Prometheus;
 namespace TaigaMcp.Metrics;
 
 /// <summary>
-/// Метрики вызовов MCP-инструментов в формате Prometheus:
-///  - taiga_mcp_tool_requests_total{tool,status}          — RPS (число вызовов);
-///  - taiga_mcp_tool_errors_total{tool}                   — error rate (число ошибок);
-///  - taiga_mcp_tool_request_duration_seconds{tool}       — latency (гистограмма длительности).
+/// MCP tool call metrics in Prometheus format:
+///  - taiga_mcp_tool_requests_total{tool,status}          - RPS (number of calls);
+///  - taiga_mcp_tool_errors_total{tool}                   - error rate (number of errors);
+///  - taiga_mcp_tool_request_duration_seconds{tool}       - latency (duration histogram).
 /// </summary>
 public sealed class McpMetrics
 {
@@ -21,38 +21,38 @@ public sealed class McpMetrics
     private readonly Counter _errors;
     private readonly Histogram _duration;
 
-    /// <summary>Создаёт метрики в глобальном реестре Prometheus.</summary>
+    /// <summary>Creates the metrics in the global Prometheus registry.</summary>
     public McpMetrics()
         : this(Prometheus.Metrics.DefaultRegistry)
     {
     }
 
-    /// <summary>Создаёт метрики в указанном реестре (используется в тестах).</summary>
+    /// <summary>Creates the metrics in the given registry (used in tests).</summary>
     public McpMetrics(CollectorRegistry registry)
     {
         var factory = Prometheus.Metrics.WithCustomRegistry(registry);
 
         _requests = factory.CreateCounter(
             RequestsMetricName,
-            "Общее число вызовов MCP-инструментов.",
+            "Total number of MCP tool calls.",
             new[] { "tool", "status" });
 
         _errors = factory.CreateCounter(
             ErrorsMetricName,
-            "Число вызовов MCP-инструментов, завершившихся ошибкой.",
+            "Number of MCP tool calls that ended in an error.",
             new[] { "tool" });
 
         _duration = factory.CreateHistogram(
             DurationMetricName,
-            "Длительность вызова MCP-инструмента в секундах.",
+            "Duration of an MCP tool call in seconds.",
             new[] { "tool" });
     }
 
-    /// <summary>Начинает измерение длительности вызова инструмента.</summary>
+    /// <summary>Starts measuring the duration of a tool call.</summary>
     public IDisposable MeasureDuration(string tool)
         => _duration.WithLabels(Normalize(tool)).NewTimer();
 
-    /// <summary>Фиксирует результат вызова инструмента (успех/ошибка).</summary>
+    /// <summary>Records the result of a tool call (success or error).</summary>
     public void Observe(string tool, bool success)
     {
         var name = Normalize(tool);

@@ -1,18 +1,18 @@
 namespace TaigaMcp.Configuration;
 
 /// <summary>
-/// Настройки веб-сервера (адрес и порт прослушивания).
-/// Берутся из секции "Server" и могут быть переопределены переменными MCP_HOST / MCP_PORT.
+/// Web server settings (listen address and port).
+/// Read from the "Server" section and can be overridden by MCP_HOST / MCP_PORT.
 /// </summary>
 public sealed class ServerOptions
 {
     /// <summary>
-    /// Адрес прослушивания.
-    /// "0.0.0.0" (по умолчанию) — все сетевые интерфейсы, "127.0.0.1" — только локально,
-    /// также поддерживаются "localhost", "*", "+" и конкретный IP.
+    /// Listen address.
+    /// "127.0.0.1" (default) is local only, "0.0.0.0" is all network interfaces;
+    /// "localhost", "*", "+" and a specific IP are also supported.
     /// </summary>
-    public string Host { get; set; } = "0.0.0.0";
+    public string Host { get; set; } = "127.0.0.1";
 
-    /// <summary>Порт прослушивания.</summary>
+    /// <summary>Listen port.</summary>
     public int Port { get; set; } = 5000;
 }

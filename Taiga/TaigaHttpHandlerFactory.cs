@@ -7,21 +7,21 @@ using TaigaMcp.Configuration;
 namespace TaigaMcp.Taiga;
 
 /// <summary>
-/// Создание HTTP-обработчика для Taiga API и обработка корпоративного/самоподписанного
-/// сертификата:
-///  - CaCertificatePath    — доверять указанному сертификату (pinning по отпечатку; корневой ЦС — по цепочке);
-///  - IgnoreSslErrors=true — полностью отключить проверку (крайняя мера, только для доверенной сети).
+/// Creates the HTTP handler for the Taiga API and handles corporate or self-signed
+/// certificates:
+///  - CaCertificatePath    - trust the given certificate (pinned by thumbprint; a root CA through the chain);
+///  - IgnoreSslErrors=true - disable validation entirely (last resort, trusted networks only).
 /// </summary>
 public static class TaigaHttpHandlerFactory
 {
     /// <summary>
-    /// Проверяет корректность сертификата при инициализации приложения.
-    /// Бросает исключение при отсутствии/повреждении/истечении срока действия сертификата,
-    /// чтобы ошибка конфигурации выявлялась сразу при старте, а не при первом запросе.
+    /// Validates the certificate when the application initializes.
+    /// Throws if the certificate is missing, corrupt or expired,
+    /// so a configuration error is caught at startup, not on the first request.
     /// </summary>
     public static void ValidateConfiguration(TaigaOptions options)
     {
-        // При отключённой проверке или отсутствии пути к сертификату проверять нечего.
+        // With validation disabled or no certificate path, there is nothing to check.
         if (options.IgnoreSslErrors || string.IsNullOrWhiteSpace(options.CaCertificatePath))
         {
             return;
@@ -30,14 +30,14 @@ public static class TaigaHttpHandlerFactory
         using var certificate = LoadCertificate(options.CaCertificatePath);
     }
 
-    /// <summary>Создаёт HTTP-обработчик под заданные настройки Taiga.</summary>
+    /// <summary>Creates an HTTP handler for the given Taiga settings.</summary>
     public static HttpClientHandler Create(TaigaOptions options)
     {
         var handler = new HttpClientHandler();
 
         if (options.IgnoreSslErrors)
         {
-            // ВНИМАНИЕ: отключает проверку сертификата — только для доверенных внутренних серверов.
+            // WARNING: this disables certificate validation. Use only for trusted internal servers.
             handler.ServerCertificateCustomValidationCallback =
                 HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
             return handler;
@@ -45,7 +45,7 @@ public static class TaigaHttpHandlerFactory
 
         if (!string.IsNullOrWhiteSpace(options.CaCertificatePath))
         {
-            // Для проверки достаточно отпечатка; сам сертификат освобождаем.
+            // Only the thumbprint is needed for the check, so the certificate itself is disposed.
             string pinnedThumbprint;
             using (var pinned = LoadCertificate(options.CaCertificatePath))
             {
@@ -54,7 +54,7 @@ public static class TaigaHttpHandlerFactory
 
             handler.ServerCertificateCustomValidationCallback = (_, certificate, _, errors) =>
             {
-                // Если стандартная проверка уже успешна — доверяем.
+                // If standard validation already succeeded, trust it.
                 if (errors == SslPolicyErrors.None)
                 {
                     return true;
@@ -65,8 +65,8 @@ public static class TaigaHttpHandlerFactory
                     return false;
                 }
 
-                // 1) Точное совпадение сертификата (pinning) — рабочий вариант для
-                //    самоподписанного/листового сертификата.
+                // 1) Exact certificate match (pinning), which works for a
+                //    self-signed or leaf certificate.
                 return string.Equals(certificate.Thumbprint, pinnedThumbprint, StringComparison.OrdinalIgnoreCase);
             };
         }
@@ -75,8 +75,8 @@ public static class TaigaHttpHandlerFactory
     }
 
     /// <summary>
-    /// Загружает и валидирует сертификат из файла. Поддерживаются форматы PEM (.pem/.crt)
-    /// и DER/PKCS#12 (.cer/.pfx). Относительный путь разрешается от каталога сборки.
+    /// Loads and validates a certificate from a file. Supports PEM (.pem/.crt)
+    /// and DER/PKCS#12 (.cer/.pfx). A relative path is resolved from the build output directory.
     /// </summary>
     private static X509Certificate2 LoadCertificate(string path)
     {
@@ -87,27 +87,27 @@ public static class TaigaHttpHandlerFactory
         if (!File.Exists(fullPath))
         {
             throw new FileNotFoundException(
-                $"Не найден сертификат корпоративного ЦС: {fullPath}", fullPath);
+                $"Corporate CA certificate not found: {fullPath}", fullPath);
         }
 
         X509Certificate2 certificate;
         try
         {
-            // В .NET 8 конструктор X509Certificate2(path) поддерживает PEM (.crt/.pem)
-            // и DER/PKCS#12 (.cer/.pfx).
+            // In .NET 8 the X509Certificate2(path) constructor supports PEM (.crt/.pem)
+            // and DER/PKCS#12 (.cer/.pfx).
             certificate = new X509Certificate2(fullPath);
         }
         catch (CryptographicException ex)
         {
             throw new InvalidOperationException(
-                $"Не удалось загрузить сертификат '{fullPath}': файл повреждён или формат не поддерживается.", ex);
+                $"Failed to load certificate '{fullPath}': the file is corrupt or its format is not supported.", ex);
         }
 
         if (string.IsNullOrEmpty(certificate.Thumbprint))
         {
             certificate.Dispose();
             throw new InvalidOperationException(
-                $"Сертификат '{fullPath}' не содержит корректных данных (пустой отпечаток).");
+                $"Certificate '{fullPath}' contains no valid data (empty thumbprint).");
         }
 
         if (certificate.NotAfter <= DateTime.Now)
@@ -115,7 +115,7 @@ public static class TaigaHttpHandlerFactory
             var notAfter = certificate.NotAfter;
             certificate.Dispose();
             throw new InvalidOperationException(
-                $"Срок действия сертификата '{fullPath}' истёк {notAfter:u}.");
+                $"Certificate '{fullPath}' expired on {notAfter:u}.");
         }
 
         return certificate;

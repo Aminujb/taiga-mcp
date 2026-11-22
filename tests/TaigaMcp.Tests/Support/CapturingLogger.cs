@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 
 namespace TaigaMcp.Tests.Support;
 
-/// <summary>Простой накопительный логгер для проверки записей в тестах.</summary>
+/// <summary>Simple accumulating logger for checking entries in tests.</summary>
 internal sealed class CapturingLogger<T> : ILogger<T>
 {
     public List<string> Messages { get; } = new();

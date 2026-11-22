@@ -9,8 +9,8 @@ using TaigaMcp.Taiga;
 namespace TaigaMcp.Tests.Support;
 
 /// <summary>
-/// Собирает инструмент MCP с поддельным HTTP-транспортом, аудит-логгером и метриками,
-/// чтобы тестировать поведение инструментов без реального сервера Taiga.
+/// Builds an MCP tool with a fake HTTP transport, audit logger and metrics,
+/// so tool behavior can be tested without a real Taiga server.
 /// </summary>
 internal sealed class ToolHarness : IDisposable
 {

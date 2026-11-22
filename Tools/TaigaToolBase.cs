@@ -7,11 +7,11 @@ using TaigaMcp.Taiga;
 namespace TaigaMcp.Tools;
 
 /// <summary>
-/// Базовый класс инструментов MCP.
+/// Base class for MCP tools.
 ///
-/// Хранит клиента Taiga, аудит-лог и метрики, а также предоставляет обёртки выполнения,
-/// которые преобразуют исключения в понятное текстовое сообщение для клиента,
-/// фиксируют метрики и (для деструктивных инструментов) пишут запись в аудит-лог.
+/// Holds the Taiga client, audit log and metrics, and provides execution wrappers
+/// that turn exceptions into a clear text message for the client,
+/// record metrics and (for destructive tools) write an audit log entry.
 /// </summary>
 public abstract class TaigaToolBase
 {
@@ -22,19 +22,19 @@ public abstract class TaigaToolBase
         Metrics = metrics;
     }
 
-    /// <summary>Клиент Taiga REST API.</summary>
+    /// <summary>Taiga REST API client.</summary>
     protected TaigaClient Client { get; }
 
-    /// <summary>Аудит-лог деструктивных операций.</summary>
+    /// <summary>Audit log of destructive operations.</summary>
     protected AuditLogger Audit { get; }
 
-    /// <summary>Метрики вызовов инструментов (Prometheus).</summary>
+    /// <summary>Tool call metrics (Prometheus).</summary>
     protected McpMetrics Metrics { get; }
 
     /// <summary>
-    /// Выполняет действие инструмента и преобразует исключения в понятное текстовое сообщение,
-    /// чтобы клиент MCP получил описание ошибки, а не падение сервера.
-    /// Имя инструмента для метрик определяется по имени вызывающего метода.
+    /// Runs a tool action and turns exceptions into a clear text message,
+    /// so the MCP client gets an error description rather than a server crash.
+    /// The tool name for metrics is resolved from the calling method's name.
     /// </summary>
     protected async Task<string> RunAsync(Func<Task<string>> action, [CallerMemberName] string memberName = "")
     {
@@ -54,8 +54,8 @@ public abstract class TaigaToolBase
     }
 
     /// <summary>
-    /// Выполняет деструктивный инструмент: пишет запись в аудит-лог
-    /// (имя инструмента, аргументы, результат, IP клиента, время) и фиксирует метрики.
+    /// Runs a destructive tool: writes an audit log entry
+    /// (tool name, arguments, result, client IP, time) and records metrics.
     /// </summary>
     protected async Task<string> RunDestructiveAsync(
         string toolName,
@@ -82,9 +82,9 @@ public abstract class TaigaToolBase
     {
         if (ex is TaigaApiException api)
         {
-            return $"Ошибка Taiga API ({(int)api.StatusCode} {api.StatusCode}):\n{api.ResponseBody}";
+            return $"Taiga API error ({(int)api.StatusCode} {api.StatusCode}):\n{api.ResponseBody}";
         }
-        return "Ошибка выполнения инструмента: " + ex.Message;
+        return "Tool execution error: " + ex.Message;
     }
 
     protected static string? Q(int? value)

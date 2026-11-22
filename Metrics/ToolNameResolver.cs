@@ -5,14 +5,14 @@ using ModelContextProtocol.Server;
 namespace TaigaMcp.Metrics;
 
 /// <summary>
-/// Определяет имя MCP-инструмента (значение <c>McpServerToolAttribute.Name</c>)
-/// по классу и имени метода инструмента. Результат кэшируется.
+/// Resolves the MCP tool name (the value of <c>McpServerToolAttribute.Name</c>)
+/// from the tool's class and method name. The result is cached.
 /// </summary>
 public static class ToolNameResolver
 {
     private static readonly ConcurrentDictionary<(Type Type, string Method), string> Cache = new();
 
-    /// <summary>Возвращает имя MCP-инструмента для метода класса.</summary>
+    /// <summary>Returns the MCP tool name for a class method.</summary>
     public static string Resolve(Type toolClass, string methodName)
         => Cache.GetOrAdd((toolClass, methodName), static key => ResolveCore(key.Type, key.Method));
 

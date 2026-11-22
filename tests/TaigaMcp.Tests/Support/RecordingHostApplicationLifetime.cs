@@ -3,8 +3,8 @@ using Microsoft.Extensions.Hosting;
 namespace TaigaMcp.Tests.Support;
 
 /// <summary>
-/// Реализация <see cref="IHostApplicationLifetime"/> с управляемыми токенами,
-/// позволяющая инициировать события Stopping/Stopped в тестах.
+/// An <see cref="IHostApplicationLifetime"/> implementation with controllable tokens,
+/// used to trigger Stopping/Stopped events in tests.
 /// </summary>
 internal sealed class RecordingHostApplicationLifetime : IHostApplicationLifetime
 {

@@ -1,24 +1,24 @@
 namespace TaigaMcp.Configuration;
 
 /// <summary>
-/// Настройки ограничения частоты запросов к MCP-эндпоинту (rate limiting).
-/// Берутся из секции "RateLimit" и могут быть переопределены переменными
+/// Rate limiting settings for the MCP endpoint.
+/// Read from the "RateLimit" section and can be overridden by environment variables
 /// RATE_LIMIT_ENABLED / RATE_LIMIT_PERMIT / RATE_LIMIT_WINDOW_SECONDS.
 /// </summary>
 public sealed class RateLimitOptions
 {
-    /// <summary>Включено ли ограничение частоты запросов.</summary>
+    /// <summary>Whether rate limiting is enabled.</summary>
     public bool Enabled { get; set; } = true;
 
-    /// <summary>Максимальное число запросов в окне на один ключ (токен или IP).</summary>
+    /// <summary>Maximum requests per window for one key (token or IP).</summary>
     public int PermitLimit { get; set; } = 120;
 
-    /// <summary>Размер окна в секундах.</summary>
+    /// <summary>Window size in seconds.</summary>
     public int WindowSeconds { get; set; } = 60;
 
     /// <summary>
-    /// Максимальная длина очереди ожидающих запросов сверх лимита.
-    /// 0 — лишние запросы сразу отклоняются (429).
+    /// Maximum length of the queue of requests waiting beyond the limit.
+    /// 0 rejects excess requests immediately (429).
     /// </summary>
     public int QueueLimit { get; set; }
 }

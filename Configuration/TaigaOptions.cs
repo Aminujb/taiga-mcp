@@ -1,92 +1,92 @@
 namespace TaigaMcp.Configuration;
 
 /// <summary>
-/// Настройки подключения к Taiga REST API.
-/// Значения берутся из секции конфигурации "Taiga" (appsettings.json),
-/// а также могут быть переопределены переменными окружения (TAIGA_*).
+/// Taiga REST API connection settings.
+/// Values come from the "Taiga" configuration section (appsettings.json)
+/// and can be overridden by environment variables (TAIGA_*).
 /// </summary>
 public sealed class TaigaOptions
 {
     /// <summary>
-    /// Базовый адрес API Taiga. По умолчанию облачный сервер Taiga.
-    /// Пример: https://api.taiga.io/api/v1 или http://localhost:8000/api/v1
+    /// Base address of the Taiga API. Defaults to the Taiga cloud server.
+    /// Example: https://api.taiga.io/api/v1 or http://localhost:8000/api/v1
     /// </summary>
     public string BaseUrl { get; set; } = "https://api.taiga.io/api/v1";
 
-    /// <summary>Логин (username или email) для стандартной аутентификации.</summary>
+    /// <summary>Login (username or email) for standard authentication.</summary>
     public string? Username { get; set; }
 
-    /// <summary>Пароль для стандартной аутентификации.</summary>
+    /// <summary>Password for standard authentication.</summary>
     public string? Password { get; set; }
 
     /// <summary>
-    /// Готовый токен доступа (auth_token). Если задан — вход по логину/паролю не выполняется.
-    /// Приоритетнее, чем Username/Password.
+    /// A ready-made access token (auth_token). If set, no username/password login is performed.
+    /// Takes priority over Username/Password.
     ///
-    /// Это альтернативный вариант авторизации для случаев, когда прямой вход по API недоступен
-    /// (например, из-за SSO): токен можно взять из уже открытой сессии Taiga
-    /// (localStorage ключ «taiga.auth_token» или заголовок Authorization) и передать сюда.
+    /// This is an alternative for cases where direct API login isn't available
+    /// (for example because of SSO): the token can be taken from an open Taiga session
+    /// (the "taiga.auth_token" localStorage key or the Authorization header) and passed here.
     /// </summary>
     public string? Token { get; set; }
 
-    /// <summary>Refresh-токен (необязательно).</summary>
+    /// <summary>Refresh token (optional).</summary>
     public string? RefreshToken { get; set; }
 
     /// <summary>
-    /// Способ авторизации:
-    ///  - "auto" (по умолчанию): сначала заданный Token, затем RefreshToken, затем вход по Username/Password;
-    ///  - "password": всегда выполнять вход по Username/Password (даже если задан Token);
-    ///  - "token": использовать только заданный Token, вход по API не выполняется
-    ///             (вариант для SSO: токен берётся из уже открытой сессии Taiga);
-    ///  - "cookie": отправлять заголовок Cookie (сессия SSO/прокси), заголовок Authorization не используется.
+    /// Authentication method:
+    ///  - "auto" (default): the configured Token, then RefreshToken, then Username/Password login;
+    ///  - "password": always log in with Username/Password (even if Token is set);
+    ///  - "token": use only the configured Token, with no API login
+    ///             (for SSO: the token comes from an open Taiga session);
+    ///  - "cookie": send the Cookie header (SSO/proxy session); the Authorization header is not used.
     /// </summary>
     public string AuthMethod { get; set; } = "auto";
 
     /// <summary>
-    /// Значение заголовка Cookie для режима AuthMethod="cookie".
-    /// Используется, когда доступ к API возможен только с сессионной cookie SSO
-    /// (например, Taiga за обратным прокси с SSO-аутентификацией).
-    /// Пример: "sessionid=abc123; csrftoken=xyz".
+    /// Value of the Cookie header for AuthMethod="cookie".
+    /// Used when the API can only be reached with an SSO session cookie
+    /// (for example Taiga behind a reverse proxy with SSO authentication).
+    /// Example: "sessionid=abc123; csrftoken=xyz".
     /// </summary>
     public string? Cookie { get; set; }
 
     /// <summary>
-    /// Схема авторизации в заголовке Authorization.
-    /// "Bearer" — стандартный пользовательский токен Taiga (по умолчанию).
-    /// "Application" — токен внешнего приложения (Authorization: Application {token}).
+    /// Scheme used in the Authorization header.
+    /// "Bearer" is the standard Taiga user token (default).
+    /// "Application" is an external application token (Authorization: Application {token}).
     /// </summary>
     public string AuthScheme { get; set; } = "Bearer";
 
     /// <summary>
-    /// Путь к сертификату (PEM/DER/PFX), которому следует доверять.
-    /// Если это корневой ЦС — выполняется проверка цепочки; если листовой/самоподписанный
-    /// сертификат — pinning по отпечатку. Предпочтительнее, чем IgnoreSslErrors.
-    /// Относительный путь разрешается относительно каталога сборки.
+    /// Path to a certificate (PEM/DER/PFX) to trust.
+    /// A root CA is validated through the chain; a leaf or self-signed
+    /// certificate is pinned by thumbprint. Preferred over IgnoreSslErrors.
+    /// A relative path is resolved against the build output directory.
     /// </summary>
     public string? CaCertificatePath { get; set; }
 
     /// <summary>
-    /// Игнорировать ошибки проверки TLS-сертификата сервера Taiga.
-    /// Нужно для корпоративных или самоподписанных сертификатов, которым не доверяет ОС.
-    /// Включать только для доверенных внутренних инсталляций.
+    /// Ignore TLS certificate validation errors for the Taiga server.
+    /// Needed for corporate or self-signed certificates the OS doesn't trust.
+    /// Enable only for trusted internal installations.
     /// </summary>
     public bool IgnoreSslErrors { get; set; }
 
     /// <summary>
-    /// Отключать пагинацию (заголовок x-disable-pagination) для списочных запросов по умолчанию.
-    /// true — возвращать все записи сразу.
+    /// Disable pagination (the x-disable-pagination header) for list requests by default.
+    /// true returns all records at once.
     /// </summary>
     public bool DisablePaginationByDefault { get; set; } = true;
 
-    /// <summary>Таймаут HTTP-запросов к Taiga в секундах. По умолчанию 30.</summary>
+    /// <summary>Timeout for HTTP requests to Taiga, in seconds. Defaults to 30.</summary>
     public int TimeoutSeconds { get; set; } = 30;
 
     /// <summary>
-    /// Максимальное число повторных попыток при временных сбоях (сеть, 429/5xx).
-    /// 0 — повторные попытки отключены.
+    /// Maximum number of retries on transient failures (network, 429/5xx).
+    /// 0 disables retries.
     /// </summary>
     public int MaxRetries { get; set; } = 3;
 
-    /// <summary>Базовая задержка перед повтором (мс); растёт экспоненциально.</summary>
+    /// <summary>Base delay before a retry (ms); grows exponentially.</summary>
     public int RetryBaseDelayMs { get; set; } = 500;
 }

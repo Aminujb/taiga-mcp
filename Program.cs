@@ -15,40 +15,40 @@ using TaigaMcp.Security;
 using TaigaMcp.Taiga;
 
 // ---------------------------------------------------------------------------
-// Точка входа MCP-сервера для работы с Taiga.
+// Entry point of the Taiga MCP server.
 //
-// MCP доступен по HTTP через Streamable HTTP транспорт (ModelContextProtocol.AspNetCore).
-// Точка подключения — корень приложения ("/").
+// MCP is served over HTTP using the Streamable HTTP transport (ModelContextProtocol.AspNetCore).
+// The connection point is the application root ("/").
 //
-// Настройки Taiga берутся из секции "Taiga" (appsettings.json), необязательного
-// appsettings.Local.json (для локальных секретов) и переменных окружения:
+// Taiga settings come from the "Taiga" section (appsettings.json), the optional
+// appsettings.Local.json (for local secrets) and environment variables:
 //   TAIGA_URL, TAIGA_USERNAME, TAIGA_PASSWORD, TAIGA_TOKEN, TAIGA_REFRESH_TOKEN,
 //   TAIGA_AUTH_METHOD, TAIGA_AUTH_SCHEME, TAIGA_COOKIE, TAIGA_CA_CERT_PATH,
 //   TAIGA_IGNORE_SSL_ERRORS, TAIGA_TIMEOUT_SECONDS, TAIGA_MAX_RETRIES, TAIGA_RETRY_DELAY_MS.
-// Адрес и порт прослушивания: секция "Server" или MCP_HOST / MCP_PORT.
-// Аудит деструктивных инструментов: секция "Audit" или AUDIT_ENABLED / AUDIT_FILE_PATH,
-//   AUDIT_MAX_FILE_SIZE_MB (по умолчанию 64) / AUDIT_MAX_BACKUP_FILES.
-// Защита MCP-эндпоинта: Mcp:AuthToken или переменная окружения MCP_AUTH_TOKEN.
-// Health-эндпоинты: /health, /health/live, /health/ready;
-//   кэш readiness — секция "Health" или HEALTH_READY_CACHE_SECONDS.
-// Метрики Prometheus: секция "Metrics" или METRICS_ENABLED / METRICS_PATH.
-// Ограничение частоты запросов: секция "RateLimit" или RATE_LIMIT_*.
-// Корректное завершение: секция "Shutdown" или SHUTDOWN_*.
+// Listen address and port: the "Server" section or MCP_HOST / MCP_PORT.
+// Audit of destructive tools: the "Audit" section or AUDIT_ENABLED / AUDIT_FILE_PATH,
+//   AUDIT_MAX_FILE_SIZE_MB (default 64) / AUDIT_MAX_BACKUP_FILES.
+// MCP endpoint protection: Mcp:AuthToken or the MCP_AUTH_TOKEN environment variable.
+// Health endpoints: /health, /health/live, /health/ready;
+//   readiness cache: the "Health" section or HEALTH_READY_CACHE_SECONDS.
+// Prometheus metrics: the "Metrics" section or METRICS_ENABLED / METRICS_PATH.
+// Rate limiting: the "RateLimit" section or RATE_LIMIT_*.
+// Graceful shutdown: the "Shutdown" section or SHUTDOWN_*.
 // ---------------------------------------------------------------------------
 
-// Настройки всегда ищем рядом со сборкой, а не в текущем каталоге,
-// чтобы MCP-сервер корректно работал при запуске из любого рабочего каталога.
+// Settings are always looked up next to the build output, not in the current directory,
+// so the MCP server works when started from any working directory.
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,
     ContentRootPath = AppContext.BaseDirectory,
 });
 
-// Локальный файл с секретами (не попадает в репозиторий), имеет приоритет над appsettings.json.
+// Local secrets file (never in the repository); takes priority over appsettings.json.
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
 
-// 0. Настройки веб-сервера: адрес и порт прослушивания (секция "Server").
-//    По умолчанию слушаем 0.0.0.0 (все интерфейсы); можно ограничить до 127.0.0.1.
+// 0. Web server settings: listen address and port (the "Server" section).
+//    Listens on 127.0.0.1 by default; set 0.0.0.0 to listen on all interfaces.
 var serverOptions = new ServerOptions();
 builder.Configuration.GetSection("Server").Bind(serverOptions);
 serverOptions.Host = ReadEnv("MCP_HOST") ?? serverOptions.Host;
@@ -59,11 +59,11 @@ if (int.TryParse(ReadEnv("MCP_PORT"), out var configuredPort))
 
 builder.WebHost.ConfigureKestrel(kestrel => kestrel.Listen(ResolveHost(serverOptions.Host), serverOptions.Port));
 
-// 1. Настройки подключения к Taiga.
+// 1. Taiga connection settings.
 var options = new TaigaOptions();
 builder.Configuration.GetSection("Taiga").Bind(options);
 
-// Переопределение значениями переменных окружения (если заданы).
+// Override with environment variables (when set).
 options.BaseUrl = ReadEnv("TAIGA_URL") ?? options.BaseUrl;
 options.Username = ReadEnv("TAIGA_USERNAME") ?? options.Username;
 options.Password = ReadEnv("TAIGA_PASSWORD") ?? options.Password;
@@ -90,16 +90,16 @@ if (int.TryParse(ReadEnv("TAIGA_RETRY_DELAY_MS"), out var retryDelay))
     options.RetryBaseDelayMs = retryDelay;
 }
 
-// Ранняя валидация корпоративного сертификата: ошибка конфигурации
-// (отсутствует/повреждён/просрочен) выявляется сразу при старте, а не при первом запросе.
+// Early validation of a corporate certificate: a configuration error
+// (missing, corrupt or expired) is caught at startup, not on the first request.
 TaigaHttpHandlerFactory.ValidateConfiguration(options);
 
 builder.Services.AddSingleton(options);
 
-// Кэш токенов Taiga должен быть singleton, иначе вход выполняется на каждый вызов инструмента.
+// The Taiga token cache must be a singleton, or every tool call would log in again.
 builder.Services.AddSingleton<TaigaAuthStore>();
 
-// Аудит деструктивных инструментов: настройки + singleton-логгер.
+// Audit of destructive tools: settings and a singleton logger.
 var auditOptions = new AuditOptions();
 builder.Configuration.GetSection("Audit").Bind(auditOptions);
 if (bool.TryParse(ReadEnv("AUDIT_ENABLED"), out var auditEnabled))
@@ -120,7 +120,7 @@ builder.Services.AddSingleton(auditOptions);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<AuditLogger>();
 
-// Проверки состояния: кэширование readiness, чтобы не опрашивать Taiga на каждый запрос.
+// Health checks: readiness is cached so Taiga isn't polled on every request.
 var healthOptions = new HealthOptions();
 builder.Configuration.GetSection("Health").Bind(healthOptions);
 if (int.TryParse(ReadEnv("HEALTH_READY_CACHE_SECONDS"), out var healthReadyCache))
@@ -131,7 +131,7 @@ if (int.TryParse(ReadEnv("HEALTH_READY_CACHE_SECONDS"), out var healthReadyCache
 builder.Services.AddSingleton(healthOptions);
 builder.Services.AddSingleton<ReadinessProbe>();
 
-// Метрики Prometheus (RPS, latency, error rate вызовов инструментов).
+// Prometheus metrics (RPS, latency and error rate of tool calls).
 var metricsOptions = new MetricsOptions();
 builder.Configuration.GetSection("Metrics").Bind(metricsOptions);
 if (bool.TryParse(ReadEnv("METRICS_ENABLED"), out var metricsEnabled))
@@ -146,7 +146,7 @@ if (!metricsOptions.Path.StartsWith('/'))
 
 builder.Services.AddSingleton<McpMetrics>();
 
-// Ограничение частоты запросов к MCP-эндпоинту (partition по токену или IP).
+// Rate limiting for the MCP endpoint (partitioned by token or IP).
 var rateLimitOptions = new RateLimitOptions();
 builder.Configuration.GetSection("RateLimit").Bind(rateLimitOptions);
 if (bool.TryParse(ReadEnv("RATE_LIMIT_ENABLED"), out var rateLimitEnabled))
@@ -168,7 +168,7 @@ if (rateLimitOptions.Enabled)
     {
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-        // Глобальный лимитер: защищаем MCP-эндпоинт, но пропускаем health/metrics.
+        // Global limiter: protects the MCP endpoint and skips health/metrics.
         options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
         {
             var path = context.Request.Path;
@@ -194,7 +194,7 @@ if (rateLimitOptions.Enabled)
     });
 }
 
-// Корректное завершение работы и реакция на критические ошибки.
+// Graceful shutdown and handling of critical errors.
 var shutdownOptions = new ShutdownOptions();
 builder.Configuration.GetSection("Shutdown").Bind(shutdownOptions);
 if (int.TryParse(ReadEnv("SHUTDOWN_TIMEOUT_SECONDS"), out var shutdownTimeout))
@@ -208,16 +208,16 @@ if (bool.TryParse(ReadEnv("SHUTDOWN_ON_UNHANDLED_EXCEPTION"), out var shutdownOn
 builder.Services.Configure<HostOptions>(
     host => host.ShutdownTimeout = TimeSpan.FromSeconds(Math.Max(1, shutdownOptions.ShutdownTimeoutSeconds)));
 
-// 2. Типизированный HttpClient для Taiga API.
-//    Корпоративный/самоподписанный сертификат обрабатывается в TaigaHttpHandlerFactory
-//    (настройки проверены заранее при старте). Управление жизненным циклом обработчика
-//    берёт на себя IHttpClientFactory: ручное освобождение HttpClient не требуется.
+// 2. Typed HttpClient for the Taiga API.
+//    Corporate and self-signed certificates are handled in TaigaHttpHandlerFactory
+//    (settings were validated at startup). IHttpClientFactory manages the handler's
+//    lifecycle, so HttpClient doesn't need to be disposed manually.
 builder.Services
     .AddHttpClient<TaigaClient>()
     .ConfigurePrimaryHttpMessageHandler(() => TaigaHttpHandlerFactory.Create(options))
     .SetHandlerLifetime(TimeSpan.FromMinutes(2));
 
-// 3. MCP-сервер: HTTP-транспорт + все инструменты из текущей сборки.
+// 3. MCP server: HTTP transport plus all tools in this assembly.
 builder.Services
     .AddMcpServer(mcp =>
     {
@@ -228,16 +228,16 @@ builder.Services
             Version = "1.0.0",
         };
         mcp.ServerInstructions =
-            "Сервер предоставляет инструменты управления Taiga: проекты, пользовательские истории, " +
-            "задачи, проблемы, эпики, роли, пользователи, участники/приглашения. " +
-            "Для изменения объектов учитывайте параметр version (OCC — оптимистичный контроль версий).";
+            "This server provides tools for managing Taiga: projects, user stories, " +
+            "tasks, issues, epics, roles, users, and memberships/invitations. " +
+            "When changing objects, use the version parameter (OCC: optimistic concurrency control).";
     })
     .WithHttpTransport()
     .WithToolsFromAssembly();
 
 var app = builder.Build();
 
-// 3.1. Корректное завершение работы (таймаут задан через HostOptions.ShutdownTimeout).
+// 3.1. Graceful shutdown (the timeout is set through HostOptions.ShutdownTimeout).
 {
     var shutdownLogger = app.Services
         .GetRequiredService<ILoggerFactory>()
@@ -246,11 +246,11 @@ var app = builder.Build();
     GracefulShutdown.Register(shutdownLogger, applicationLifetime, shutdownOptions);
 }
 
-// 3.2. HTTP-метрики Prometheus и rate limiting.
+// 3.2. Prometheus HTTP metrics and rate limiting.
 if (metricsOptions.Enabled)
 {
     app.UseHttpMetrics();
-    // Создаём метрики заранее, чтобы серии были видны в /metrics с момента старта.
+    // Create the metrics up front so the series appear in /metrics from startup.
     app.Services.GetRequiredService<McpMetrics>();
 }
 
@@ -259,8 +259,8 @@ if (rateLimitOptions.Enabled)
     app.UseRateLimiter();
 }
 
-// 4. Защита MCP-эндпоинта общим токеном (заголовок X-Api-Key или Authorization: Bearer).
-//    Health-check остаётся открытым. Если токен не задан — доступ не ограничивается (только для локальной работы).
+// 4. Protect the MCP endpoint with a shared token (X-Api-Key or Authorization: Bearer header).
+//    Health checks stay open. Without a token, access isn't restricted (local use only).
 var mcpAuthToken = builder.Configuration["Mcp:AuthToken"];
 if (string.IsNullOrWhiteSpace(mcpAuthToken))
 {
@@ -270,9 +270,9 @@ if (string.IsNullOrWhiteSpace(mcpAuthToken))
 if (string.IsNullOrWhiteSpace(mcpAuthToken))
 {
     app.Logger.LogWarning(
-        "MCP-эндпоинт не защищён: Mcp:AuthToken / MCP_AUTH_TOKEN не задан. " +
-        "Сервер слушает {Host}:{Port}: при привязке к 0.0.0.0 эндпоинт будет доступен из сети " +
-        "без аутентификации. Настоятельно рекомендуется задать токен.",
+        "MCP endpoint is not protected: Mcp:AuthToken / MCP_AUTH_TOKEN is not set. " +
+        "The server is listening on {Host}:{Port}: when bound to 0.0.0.0 the endpoint is reachable from the network " +
+        "without authentication. Setting a token is strongly recommended.",
         serverOptions.Host,
         serverOptions.Port);
 }
@@ -300,28 +300,28 @@ else
     });
 }
 
-// Health-check эндпоинты (не являются частью MCP): /health, /health/live, /health/ready.
+// Health check endpoints (not part of MCP): /health, /health/live, /health/ready.
 app.MapHealthEndpoints();
 
-// Метрики Prometheus (RPS, latency, error rate).
+// Prometheus metrics (RPS, latency, error rate).
 if (metricsOptions.Enabled)
 {
     app.MapMetrics(metricsOptions.Path);
 }
 
-// Основной MCP-эндпоинт (Streamable HTTP).
+// Main MCP endpoint (Streamable HTTP).
 app.MapMcp();
 
 app.Run();
 
-// Вспомогательный метод чтения переменной окружения.
+// Helper that reads an environment variable.
 static string? ReadEnv(string name)
 {
     var value = Environment.GetEnvironmentVariable(name);
     return string.IsNullOrWhiteSpace(value) ? null : value;
 }
 
-// Преобразует строку адреса из конфигурации в IPAddress.
+// Converts the configured address string to an IPAddress.
 static IPAddress ResolveHost(string host)
 {
     if (string.IsNullOrWhiteSpace(host) || host is "0.0.0.0" or "*" or "+")
@@ -337,7 +337,7 @@ static IPAddress ResolveHost(string host)
     return IPAddress.Parse(host);
 }
 
-// Проверка токена доступа к MCP с защитой от timing-атак.
+// Checks the MCP access token, protected against timing attacks.
 static bool IsAuthorized(HttpRequest request, string expected)
 {
     string? provided = null;

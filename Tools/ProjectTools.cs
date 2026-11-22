@@ -6,24 +6,24 @@ using TaigaMcp.Taiga;
 
 namespace TaigaMcp.Tools;
 
-/// <summary>Инструменты управления проектами Taiga (Projects).</summary>
+/// <summary>Tools for managing Taiga projects.</summary>
 [McpServerToolType]
 public sealed class ProjectTools : TaigaToolBase
 {
     public ProjectTools(TaigaClient client, AuditLogger audit, McpMetrics metrics) : base(client, audit, metrics) { }
 
     [McpServerTool(Name = "taiga_list_projects", ReadOnly = true)]
-    [Description("Возвращает список проектов Taiga. Поддерживает фильтры и сортировку.")]
+    [Description("Lists Taiga projects. Supports filters and sorting.")]
     public Task<string> ListProjectsAsync(
-        [Description("ID участника (member id) для фильтрации проектов, где он состоит.")] int? member = null,
-        [Description("ID участников через запятую.")] string? members = null,
-        [Description("Проект ищет новых участников (true/false).")] bool? is_looking_for_people = null,
-        [Description("Проект отмечен как рекомендуемый (true/false).")] bool? is_featured = null,
-        [Description("Активирован backlog (true/false).")] bool? is_backlog_activated = null,
-        [Description("Активирован kanban (true/false).")] bool? is_kanban_activated = null,
-        [Description("Поле сортировки: memberships__user_order, total_fans, total_activity, total_fans_last_week и т.п.")] string? order_by = null,
-        [Description("Отключить пагинацию и вернуть все записи (по умолчанию true).")] bool? disable_pagination = null,
-        [Description("Номер страницы (если пагинация включена).")] int? page = null,
+        [Description("Member ID, to filter to projects that member belongs to.")] int? member = null,
+        [Description("Comma-separated member IDs.")] string? members = null,
+        [Description("The project is looking for new members (true/false).")] bool? is_looking_for_people = null,
+        [Description("The project is marked as featured (true/false).")] bool? is_featured = null,
+        [Description("The backlog is activated (true/false).")] bool? is_backlog_activated = null,
+        [Description("Kanban is activated (true/false).")] bool? is_kanban_activated = null,
+        [Description("Sort field: memberships__user_order, total_fans, total_activity, total_fans_last_week, etc.")] string? order_by = null,
+        [Description("Disable pagination and return all records (default true).")] bool? disable_pagination = null,
+        [Description("Page number (when pagination is enabled).")] int? page = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(async () =>
@@ -44,18 +44,18 @@ public sealed class ProjectTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_get_project", ReadOnly = true)]
-    [Description("Возвращает проект по его ID.")]
+    [Description("Gets a project by its ID.")]
     public Task<string> GetProjectAsync(
-        [Description("ID проекта.")] int project_id,
+        [Description("Project ID.")] int project_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.GetAsync($"projects/{project_id}", disablePagination: null, ct: cancellationToken));
     }
 
     [McpServerTool(Name = "taiga_get_project_by_slug", ReadOnly = true)]
-    [Description("Возвращает проект по его slug.")]
+    [Description("Gets a project by its slug.")]
     public Task<string> GetProjectBySlugAsync(
-        [Description("Slug проекта, например 'project-0'.")] string slug,
+        [Description("Project slug, for example 'project-0'.")] string slug,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.GetAsync("projects/by_slug",
@@ -64,20 +64,20 @@ public sealed class ProjectTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_create_project")]
-    [Description("Создаёт новый проект Taiga. Обязательны name и description.")]
+    [Description("Creates a new Taiga project. name and description are required.")]
     public Task<string> CreateProjectAsync(
-        [Description("Название проекта (обязательно).")] string name,
-        [Description("Описание проекта (обязательно).")] string description,
-        [Description("ID базового шаблона проекта (creation_template).")] int? creation_template = null,
-        [Description("Активировать backlog.")] bool? is_backlog_activated = null,
-        [Description("Активировать модуль Issues.")] bool? is_issues_activated = null,
-        [Description("Активировать kanban.")] bool? is_kanban_activated = null,
-        [Description("Сделать проект приватным.")] bool? is_private = null,
-        [Description("Активировать wiki.")] bool? is_wiki_activated = null,
-        [Description("Сервис видеоконференций: whereby-com, jitsi, talky или custom.")] string? videoconferences = null,
-        [Description("Доп. данные для генерации ссылки видеоконференции.")] string? videoconferences_extra_data = null,
-        [Description("Общее количество milestones.")] int? total_milestones = null,
-        [Description("Общее количество story points.")] double? total_story_points = null,
+        [Description("Project name (required).")] string name,
+        [Description("Project description (required).")] string description,
+        [Description("ID of the base project template (creation_template).")] int? creation_template = null,
+        [Description("Activate the backlog.")] bool? is_backlog_activated = null,
+        [Description("Activate the Issues module.")] bool? is_issues_activated = null,
+        [Description("Activate kanban.")] bool? is_kanban_activated = null,
+        [Description("Make the project private.")] bool? is_private = null,
+        [Description("Activate the wiki.")] bool? is_wiki_activated = null,
+        [Description("Video conference service: whereby-com, jitsi, talky or custom.")] string? videoconferences = null,
+        [Description("Extra data for generating the video conference link.")] string? videoconferences_extra_data = null,
+        [Description("Total number of milestones.")] int? total_milestones = null,
+        [Description("Total number of story points.")] double? total_story_points = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -100,21 +100,21 @@ public sealed class ProjectTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_update_project")]
-    [Description("Изменяет проект. По умолчанию частичное изменение (PATCH); replace_all=true — полная замена (PUT).")]
+    [Description("Updates a project. Partial update (PATCH) by default; replace_all=true replaces it entirely (PUT).")]
     public Task<string> UpdateProjectAsync(
-        [Description("ID проекта.")] int project_id,
-        [Description("Текущая версия объекта для OCC (необязательно, но рекомендуется).")] int? version = null,
-        [Description("Полная замена объекта (PUT) вместо частичного изменения (PATCH).")] bool replace_all = false,
-        [Description("Новое название проекта.")] string? name = null,
-        [Description("Новое описание проекта.")] string? description = null,
-        [Description("Активировать backlog.")] bool? is_backlog_activated = null,
-        [Description("Активировать модуль Issues.")] bool? is_issues_activated = null,
-        [Description("Активировать kanban.")] bool? is_kanban_activated = null,
-        [Description("Сделать проект приватным.")] bool? is_private = null,
-        [Description("Активировать wiki.")] bool? is_wiki_activated = null,
-        [Description("Сервис видеоконференций: whereby-com, jitsi, talky или custom.")] string? videoconferences = null,
-        [Description("Доп. данные для видеоконференции.")] string? videoconferences_extra_data = null,
-        [Description("Проект ищет новых участников.")] bool? is_looking_for_people = null,
+        [Description("Project ID.")] int project_id,
+        [Description("Current object version for OCC (optional but recommended).")] int? version = null,
+        [Description("Replace the whole object (PUT) instead of a partial update (PATCH).")] bool replace_all = false,
+        [Description("New project name.")] string? name = null,
+        [Description("New project description.")] string? description = null,
+        [Description("Activate the backlog.")] bool? is_backlog_activated = null,
+        [Description("Activate the Issues module.")] bool? is_issues_activated = null,
+        [Description("Activate kanban.")] bool? is_kanban_activated = null,
+        [Description("Make the project private.")] bool? is_private = null,
+        [Description("Activate the wiki.")] bool? is_wiki_activated = null,
+        [Description("Video conference service: whereby-com, jitsi, talky or custom.")] string? videoconferences = null,
+        [Description("Extra data for the video conference.")] string? videoconferences_extra_data = null,
+        [Description("The project is looking for new members.")] bool? is_looking_for_people = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -137,9 +137,9 @@ public sealed class ProjectTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_delete_project", Destructive = true)]
-    [Description("Удаляет проект по ID.")]
+    [Description("Deletes a project by ID.")]
     public Task<string> DeleteProjectAsync(
-        [Description("ID проекта.")] int project_id,
+        [Description("Project ID.")] int project_id,
         CancellationToken cancellationToken = default)
     {
         return RunDestructiveAsync(
@@ -149,36 +149,36 @@ public sealed class ProjectTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_get_project_stats", ReadOnly = true)]
-    [Description("Возвращает статистику проекта.")]
+    [Description("Gets project statistics.")]
     public Task<string> GetProjectStatsAsync(
-        [Description("ID проекта.")] int project_id,
+        [Description("Project ID.")] int project_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.GetAsync($"projects/{project_id}/stats", disablePagination: null, ct: cancellationToken));
     }
 
     [McpServerTool(Name = "taiga_leave_project")]
-    [Description("Покидает проект от имени текущего пользователя.")]
+    [Description("Leaves the project as the current user.")]
     public Task<string> LeaveProjectAsync(
-        [Description("ID проекта.")] int project_id,
+        [Description("Project ID.")] int project_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.PostAsync($"projects/{project_id}/leave", ct: cancellationToken));
     }
 
     [McpServerTool(Name = "taiga_like_project")]
-    [Description("Ставит «лайк» проекту.")]
+    [Description("Likes a project.")]
     public Task<string> LikeProjectAsync(
-        [Description("ID проекта.")] int project_id,
+        [Description("Project ID.")] int project_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.PostAsync($"projects/{project_id}/like", ct: cancellationToken));
     }
 
     [McpServerTool(Name = "taiga_unlike_project")]
-    [Description("Убирает «лайк» с проекта.")]
+    [Description("Removes a like from a project.")]
     public Task<string> UnlikeProjectAsync(
-        [Description("ID проекта.")] int project_id,
+        [Description("Project ID.")] int project_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.PostAsync($"projects/{project_id}/unlike", ct: cancellationToken));

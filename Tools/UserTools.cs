@@ -6,17 +6,17 @@ using TaigaMcp.Taiga;
 
 namespace TaigaMcp.Tools;
 
-/// <summary>Инструменты управления пользователями Taiga (Users).</summary>
+/// <summary>Tools for managing Taiga users.</summary>
 [McpServerToolType]
 public sealed class UserTools : TaigaToolBase
 {
     public UserTools(TaigaClient client, AuditLogger audit, McpMetrics metrics) : base(client, audit, metrics) { }
 
     [McpServerTool(Name = "taiga_list_users", ReadOnly = true)]
-    [Description("Возвращает список пользователей. Можно отфильтровать по проекту.")]
+    [Description("Lists users. Can be filtered by project.")]
     public Task<string> ListUsersAsync(
-        [Description("ID проекта — вернуть только его участников.")] int? project = null,
-        [Description("Отключить пагинацию и вернуть все записи (по умолчанию true).")] bool? disable_pagination = null,
+        [Description("Project ID: return only its members.")] int? project = null,
+        [Description("Disable pagination and return all records (default true).")] bool? disable_pagination = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(async () =>
@@ -27,28 +27,28 @@ public sealed class UserTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_get_user", ReadOnly = true)]
-    [Description("Возвращает пользователя по ID.")]
+    [Description("Gets a user by ID.")]
     public Task<string> GetUserAsync(
-        [Description("ID пользователя.")] int user_id,
+        [Description("User ID.")] int user_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.GetAsync($"users/{user_id}", disablePagination: null, ct: cancellationToken));
     }
 
     [McpServerTool(Name = "taiga_get_current_user", ReadOnly = true)]
-    [Description("Возвращает текущего аутентифицированного пользователя (users/me).")]
+    [Description("Gets the current authenticated user (users/me).")]
     public Task<string> GetCurrentUserAsync(CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.GetAsync("users/me", disablePagination: null, ct: cancellationToken));
     }
 
     [McpServerTool(Name = "taiga_register_user")]
-    [Description("Регистрирует нового пользователя (публичная регистрация). Все параметры обязательны.")]
+    [Description("Registers a new user (public registration). All parameters are required.")]
     public Task<string> RegisterUserAsync(
-        [Description("Логин нового пользователя.")] string username,
-        [Description("Пароль.")] string password,
+        [Description("New user's username.")] string username,
+        [Description("Password.")] string password,
         [Description("Email.")] string email,
-        [Description("Полное имя.")] string full_name,
+        [Description("Full name.")] string full_name,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -65,16 +65,16 @@ public sealed class UserTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_update_user")]
-    [Description("Изменяет профиль пользователя (PATCH).")]
+    [Description("Updates a user profile (PATCH).")]
     public Task<string> UpdateUserAsync(
-        [Description("ID пользователя.")] int user_id,
-        [Description("Текущая версия объекта для OCC (необязательно).")] int? version = null,
-        [Description("Новый логин.")] string? username = null,
-        [Description("Новое полное имя.")] string? full_name = null,
-        [Description("Новый email.")] string? email = null,
-        [Description("Биография.")] string? bio = null,
-        [Description("Язык интерфейса (ID локали).")] string? lang = null,
-        [Description("Часовой пояс.")] string? timezone = null,
+        [Description("User ID.")] int user_id,
+        [Description("Current object version for OCC (optional).")] int? version = null,
+        [Description("New username.")] string? username = null,
+        [Description("New full name.")] string? full_name = null,
+        [Description("New email.")] string? email = null,
+        [Description("Biography.")] string? bio = null,
+        [Description("Interface language (locale ID).")] string? lang = null,
+        [Description("Time zone.")] string? timezone = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -92,9 +92,9 @@ public sealed class UserTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_delete_user", Destructive = true)]
-    [Description("Удаляет пользователя по ID. Требуются права администратора.")]
+    [Description("Deletes a user by ID. Requires administrator rights.")]
     public Task<string> DeleteUserAsync(
-        [Description("ID пользователя.")] int user_id,
+        [Description("User ID.")] int user_id,
         CancellationToken cancellationToken = default)
     {
         return RunDestructiveAsync(
@@ -104,10 +104,10 @@ public sealed class UserTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_list_user_contacts", ReadOnly = true)]
-    [Description("Возвращает контакты пользователя (список пользователей).")]
+    [Description("Gets a user's contacts (a list of users).")]
     public Task<string> ListUserContactsAsync(
-        [Description("ID пользователя.")] int user_id,
-        [Description("Строка поиска по логину, полному имени или email.")] string? q = null,
+        [Description("User ID.")] int user_id,
+        [Description("Search string for username, full name or email.")] string? q = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -118,9 +118,9 @@ public sealed class UserTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_request_password_recovery")]
-    [Description("Запрашивает восстановление пароля пользователя.")]
+    [Description("Requests a password recovery for a user.")]
     public Task<string> RequestPasswordRecoveryAsync(
-        [Description("Логин или email пользователя.")] string username,
+        [Description("Username or email of the user.")] string username,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>

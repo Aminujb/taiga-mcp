@@ -10,13 +10,13 @@ using TaigaMcp.Configuration;
 namespace TaigaMcp.Taiga;
 
 /// <summary>
-/// Тонкая обёртка над Taiga REST API.
+/// Thin wrapper over the Taiga REST API.
 ///
-/// Реализует:
-///  - стандартную токен-аутентификацию (заголовок Authorization: Bearer ...);
-///  - автоматический вход по логину/паролю и обновление токена при 401;
-///  - OCC (Optimistic Concurrency Control) — параметр version передаётся в инструментах;
-///  - управление пагинацией (заголовок x-disable-pagination).
+/// Provides:
+///  - standard token authentication (Authorization: Bearer ... header);
+///  - automatic username/password login and token refresh on 401;
+///  - OCC (Optimistic Concurrency Control): the version parameter is passed in tools;
+///  - pagination control (the x-disable-pagination header).
 /// </summary>
 public sealed class TaigaClient
 {
@@ -24,7 +24,7 @@ public sealed class TaigaClient
     private readonly TaigaOptions _options;
     private readonly TaigaAuthStore _authStore;
 
-    // Настройки сериализации JSON: не пишем null и не экранируем кириллицу.
+    // JSON serialization settings: nulls are not written and non-ASCII text is not escaped.
     private static readonly JsonSerializerOptions WriteOptions = new()
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
@@ -43,8 +43,8 @@ public sealed class TaigaClient
         _options = options;
         _authStore = authStore;
 
-        // Нормализуем базовый адрес: убираем пробелы и завершающий слэш, затем добавляем
-        // ровно один слэш — это обязательно для корректных относительных путей.
+        // Normalize the base address: remove spaces and the trailing slash, then add
+        // exactly one slash, which correct relative paths require.
         var baseUrl = (options.BaseUrl ?? string.Empty).Trim().TrimEnd('/') + "/";
         _http.BaseAddress = new Uri(baseUrl, UriKind.Absolute);
         _http.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
@@ -52,20 +52,20 @@ public sealed class TaigaClient
     }
 
     // ---------------------------------------------------------------------
-    // Аутентификация
+    // Authentication
     // ---------------------------------------------------------------------
 
-    /// <summary>Режим авторизации по cookie-сессии SSO (заголовок Authorization не используется).</summary>
+    /// <summary>SSO cookie session mode (the Authorization header is not used).</summary>
     private bool IsCookieMode()
         => string.Equals(_options.AuthMethod?.Trim(), "cookie", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>Возвращает действующий токен, при необходимости выполняя вход/обновление.</summary>
+    /// <summary>Returns a valid token, logging in or refreshing if needed.</summary>
     private async Task<string> GetTokenAsync(bool force, CancellationToken ct)
     {
                 var method = string.IsNullOrWhiteSpace(_options.AuthMethod) ? "auto" : _options.AuthMethod.Trim().ToLowerInvariant();
 
-        // Читаем токен один раз: свойство потокобезопасно, но повторное чтение
-        // могло бы вернуть уже другое значение между проверкой и возвратом.
+        // Read the token once: the property is thread-safe, but a second read
+        // could return a different value between the check and the return.
         var cached = _authStore.AuthToken;
         if (!force && cached is not null)
         {
@@ -81,7 +81,7 @@ public sealed class TaigaClient
                 return current;
             }
 
-            // Вариант для SSO: используется только заранее переданный токен.
+            // SSO option: only the token supplied in advance is used.
             if (method == "token")
             {
                 if (!string.IsNullOrWhiteSpace(_authStore.AuthToken))
@@ -90,18 +90,18 @@ public sealed class TaigaClient
                 }
 
                 throw new InvalidOperationException(
-                    "Режим AuthMethod=token требует заданного Token (auth_token из текущей сессии Taiga).");
+                    "AuthMethod=token requires Token to be set (the auth_token from the current Taiga session).");
             }
 
-            // Режим "password": всегда выполняем вход по логину/паролю.
+            // "password" mode: always log in with username and password.
             if (method == "password")
             {
                 await LoginAsync(ct).ConfigureAwait(false);
                 return _authStore.AuthToken!;
             }
 
-            // Автоматический режим: refresh → логин/пароль.
-            // 1) Пробуем обновить токен по refresh-токену.
+            // Automatic mode: refresh, then username and password.
+            // 1) Try to refresh the token with the refresh token.
             if (!string.IsNullOrWhiteSpace(_authStore.RefreshToken))
             {
                 try
@@ -111,11 +111,11 @@ public sealed class TaigaClient
                 }
                 catch (TaigaApiException)
                 {
-                    // Обновление не удалось — перейдём к обычному входу.
+                    // Refresh failed: fall through to a normal login.
                 }
             }
 
-            // 2) Обычный вход по логину/паролю.
+            // 2) Normal username/password login.
             if (!string.IsNullOrWhiteSpace(_options.Username) && !string.IsNullOrWhiteSpace(_options.Password))
             {
                 await LoginAsync(ct).ConfigureAwait(false);
@@ -123,7 +123,7 @@ public sealed class TaigaClient
             }
 
             throw new InvalidOperationException(
-                "Не заданы учётные данные Taiga. Укажите Token либо Username/Password в конфигурации.");
+                "Taiga credentials are not set. Provide Token or Username/Password in the configuration.");
         }
         finally
         {
@@ -146,8 +146,8 @@ public sealed class TaigaClient
             throw new TaigaApiException(status, text);
         }
 
-        var node = ParseAuthResponse(status, text, "аутентификация");
-        _authStore.AuthToken = ReadAuthToken(node, status, "аутентификация");
+        var node = ParseAuthResponse(status, text, "authentication");
+        _authStore.AuthToken = ReadAuthToken(node, status, "authentication");
 
         if (node["refresh"] is JsonValue refreshValue &&
             refreshValue.TryGetValue<string>(out var refreshToken) &&
@@ -166,28 +166,28 @@ public sealed class TaigaClient
             throw new TaigaApiException(status, text);
         }
 
-        var node = ParseAuthResponse(status, text, "обновление токена");
-        _authStore.AuthToken = ReadAuthToken(node, status, "обновление токена");
+        var node = ParseAuthResponse(status, text, "token refresh");
+        _authStore.AuthToken = ReadAuthToken(node, status, "token refresh");
     }
 
     /// <summary>
-    /// Разбирает JSON-ответ аутентификации. Некорректный JSON не должен приводить
-    /// к необработанному исключению — преобразуем его в <see cref="TaigaApiException"/>.
+    /// Parses a JSON authentication response. Invalid JSON must not cause an
+    /// unhandled exception, so it is converted to a <see cref="TaigaApiException"/>.
     /// </summary>
     private static JsonObject ParseAuthResponse(HttpStatusCode status, string text, string stage)
     {
         try
         {
             return JsonNode.Parse(text) as JsonObject
-                ?? throw new TaigaApiException(status, $"Ответ ({stage}) не является JSON-объектом: {text}");
+                ?? throw new TaigaApiException(status, $"Response ({stage}) is not a JSON object: {text}");
         }
         catch (JsonException ex)
         {
-            throw new TaigaApiException(status, $"Некорректный JSON в ответе ({stage}): {ex.Message}. Ответ: {text}");
+            throw new TaigaApiException(status, $"Invalid JSON in response ({stage}): {ex.Message}. Response: {text}");
         }
     }
 
-    /// <summary>Извлекает строковое поле auth_token, не падая на неверном типе значения.</summary>
+    /// <summary>Reads the auth_token string field without failing on a wrong value type.</summary>
     private static string ReadAuthToken(JsonObject node, HttpStatusCode status, string stage)
     {
         if (node["auth_token"] is JsonValue value &&
@@ -197,36 +197,36 @@ public sealed class TaigaClient
             return token;
         }
 
-        throw new TaigaApiException(status, $"В ответе ({stage}) отсутствует корректное поле auth_token.");
+        throw new TaigaApiException(status, $"Response ({stage}) has no valid auth_token field.");
     }
 
     // ---------------------------------------------------------------------
-    // Публичные операции
+    // Public operations
     // ---------------------------------------------------------------------
 
-    /// <summary>GET-запрос.</summary>
+    /// <summary>GET request.</summary>
     public Task<string> GetAsync(string path, IDictionary<string, string?>? query = null, bool? disablePagination = null, CancellationToken ct = default)
         => SendAsync(HttpMethod.Get, path, null, query, disablePagination, ct);
 
-    /// <summary>POST-запрос с телом.</summary>
+    /// <summary>POST request with a body.</summary>
     public Task<string> PostAsync(string path, JsonNode? body = null, IDictionary<string, string?>? query = null, CancellationToken ct = default)
         => SendAsync(HttpMethod.Post, path, body, query, null, ct);
 
-    /// <summary>PUT-запрос (полная замена объекта).</summary>
+    /// <summary>PUT request (replaces the whole object).</summary>
     public Task<string> PutAsync(string path, JsonNode? body = null, CancellationToken ct = default)
         => SendAsync(HttpMethod.Put, path, body, null, null, ct);
 
-    /// <summary>PATCH-запрос (частичное изменение).</summary>
+    /// <summary>PATCH request (partial update).</summary>
     public Task<string> PatchAsync(string path, JsonNode? body = null, CancellationToken ct = default)
         => SendAsync(HttpMethod.Patch, path, body, null, null, ct);
 
-    /// <summary>DELETE-запрос.</summary>
+    /// <summary>DELETE request.</summary>
     public Task<string> DeleteAsync(string path, IDictionary<string, string?>? query = null, CancellationToken ct = default)
         => SendAsync(HttpMethod.Delete, path, null, query, null, ct);
 
     /// <summary>
-    /// Основной метод выполнения запроса. Автоматически подставляет токен,
-    /// а при ответе 401 один раз повторяет запрос после переаутентификации.
+    /// Main request method. Adds the token automatically
+    /// and, on a 401 response, retries once after re-authenticating.
     /// </summary>
     public async Task<string> SendAsync(
         HttpMethod method,
@@ -238,30 +238,30 @@ public sealed class TaigaClient
     {
         var disable = disablePagination ?? _options.DisablePaginationByDefault;
 
-        // В режиме cookie-авторизации токен не требуется.
+        // Cookie authentication doesn't need a token.
         string? token = IsCookieMode() ? null : await GetTokenAsync(false, ct).ConfigureAwait(false);
 
         var (status, text, headers) = await SendWithRetryAsync(method, path, body, query, disable, token, ct).ConfigureAwait(false);
 
         if (status == HttpStatusCode.Unauthorized && !IsCookieMode())
         {
-            // Токен протух — обновляем и повторяем один раз.
+            // The token expired: refresh it and retry once.
             token = await GetTokenAsync(true, ct).ConfigureAwait(false);
             (status, text, headers) = await SendWithRetryAsync(method, path, body, query, disable, token, ct).ConfigureAwait(false);
         }
 
         if (!IsSuccess(status))
         {
-            throw new TaigaApiException(status, string.IsNullOrWhiteSpace(text) ? "(пустой ответ)" : text);
+            throw new TaigaApiException(status, string.IsNullOrWhiteSpace(text) ? "(empty response)" : text);
         }
 
         return FormatResponse(status, text, headers);
     }
 
     /// <summary>
-    /// Выполняет запрос с повторными попытками при временных сбоях.
-    /// Повторяем при статусах 408/429/5xx и при сетевых исключениях (для идемпотентных
-    /// методов), с экспоненциальной задержкой и учётом заголовка Retry-After.
+    /// Sends a request, retrying on transient failures.
+    /// Retries on 408/429/5xx statuses and on network exceptions (for idempotent
+    /// methods), with exponential backoff and respect for the Retry-After header.
     /// </summary>
     private async Task<(HttpStatusCode Status, string Body, HttpResponseHeaders Headers)> SendWithRetryAsync(
         HttpMethod method,
@@ -316,7 +316,7 @@ public sealed class TaigaClient
 
     private async Task DelayBeforeRetryAsync(int attempt, HttpResponseHeaders? headers, CancellationToken ct)
     {
-        // Учитываем Retry-After, если сервер его прислал.
+        // Honor Retry-After if the server sent it.
         var retryAfter = headers?.RetryAfter?.Delta
             ?? (headers?.RetryAfter?.Date is { } date ? date - DateTimeOffset.UtcNow : null);
         if (retryAfter is { } ra && ra > TimeSpan.Zero && ra <= TimeSpan.FromSeconds(60))
@@ -334,7 +334,7 @@ public sealed class TaigaClient
     }
 
     // ---------------------------------------------------------------------
-    // Низкоуровневый HTTP
+    // Low-level HTTP
     // ---------------------------------------------------------------------
 
     private async Task<(HttpStatusCode Status, string Body, HttpResponseHeaders Headers)> RawAsync(
@@ -352,14 +352,14 @@ public sealed class TaigaClient
 
         if (!string.IsNullOrWhiteSpace(_options.Cookie))
         {
-            // Сессионная авторизация SSO: передаём cookie как есть.
+            // SSO session authentication: pass the cookie through as is.
             request.Headers.TryAddWithoutValidation("Cookie", _options.Cookie);
         }
 
         if (!string.IsNullOrWhiteSpace(token))
         {
-            // Схема авторизации настраивается: "Bearer" (пользовательский токен)
-            // или "Application" (токен внешнего приложения Taiga).
+            // The authentication scheme is configurable: "Bearer" (user token)
+            // or "Application" (external Taiga application token).
             var scheme = string.IsNullOrWhiteSpace(_options.AuthScheme) ? "Bearer" : _options.AuthScheme.Trim();
             request.Headers.Authorization = new AuthenticationHeaderValue(scheme, token);
         }
@@ -411,7 +411,7 @@ public sealed class TaigaClient
 
     private static string FormatResponse(HttpStatusCode status, string text, HttpResponseHeaders headers)
     {
-        // Пустой ответ (например, 204 No Content) — вернём служебный JSON.
+        // Empty response (for example 204 No Content): return a small status JSON.
         if (string.IsNullOrWhiteSpace(text))
         {
             return $"{{\"status\": {(int)status}, \"message\": \"{status}\"}}";
@@ -424,7 +424,7 @@ public sealed class TaigaClient
         }
         catch (JsonException)
         {
-            // Ответ не является JSON — отдаём как есть.
+            // The response isn't JSON: return it as is.
             return text;
         }
 

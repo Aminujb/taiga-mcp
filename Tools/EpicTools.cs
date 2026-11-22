@@ -6,20 +6,20 @@ using TaigaMcp.Taiga;
 
 namespace TaigaMcp.Tools;
 
-/// <summary>Инструменты управления эпиками Taiga (Epics).</summary>
+/// <summary>Tools for managing Taiga epics.</summary>
 [McpServerToolType]
 public sealed class EpicTools : TaigaToolBase
 {
     public EpicTools(TaigaClient client, AuditLogger audit, McpMetrics metrics) : base(client, audit, metrics) { }
 
     [McpServerTool(Name = "taiga_list_epics", ReadOnly = true)]
-    [Description("Возвращает список эпиков с фильтрами.")]
+    [Description("Lists epics, with filters.")]
     public Task<string> ListEpicsAsync(
-        [Description("ID проекта.")] int? project = null,
-        [Description("Slug проекта.")] string? project__slug = null,
-        [Description("ID назначенного пользователя.")] int? assigned_to = null,
-        [Description("Статус эпика закрыт (true/false).")] bool? status__is_closed = null,
-        [Description("Отключить пагинацию и вернуть все записи (по умолчанию true).")] bool? disable_pagination = null,
+        [Description("Project ID.")] int? project = null,
+        [Description("Project slug.")] string? project__slug = null,
+        [Description("ID of the assigned user.")] int? assigned_to = null,
+        [Description("Whether the epic status is closed (true/false).")] bool? status__is_closed = null,
+        [Description("Disable pagination and return all records (default true).")] bool? disable_pagination = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(async () =>
@@ -36,20 +36,20 @@ public sealed class EpicTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_get_epic", ReadOnly = true)]
-    [Description("Возвращает эпик по ID.")]
+    [Description("Gets an epic by ID.")]
     public Task<string> GetEpicAsync(
-        [Description("ID эпика.")] int epic_id,
+        [Description("Epic ID.")] int epic_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.GetAsync($"epics/{epic_id}", disablePagination: null, ct: cancellationToken));
     }
 
     [McpServerTool(Name = "taiga_get_epic_by_ref", ReadOnly = true)]
-    [Description("Возвращает эпик по его номеру (ref) внутри проекта.")]
+    [Description("Gets an epic by its number (ref) within a project.")]
     public Task<string> GetEpicByRefAsync(
-        [Description("Номер эпика (ref).")] int @ref,
-        [Description("ID проекта.")] int? project = null,
-        [Description("Slug проекта.")] string? project__slug = null,
+        [Description("Epic number (ref).")] int @ref,
+        [Description("Project ID.")] int? project = null,
+        [Description("Project slug.")] string? project__slug = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.GetAsync("epics/by_ref",
@@ -63,22 +63,22 @@ public sealed class EpicTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_create_epic")]
-    [Description("Создаёт эпик. Обязательны project и subject.")]
+    [Description("Creates an epic. project and subject are required.")]
     public Task<string> CreateEpicAsync(
-        [Description("ID проекта (обязательно).")] int project,
-        [Description("Заголовок эпика (обязательно).")] string subject,
-        [Description("Описание.")] string? description = null,
-        [Description("ID назначенного пользователя.")] int? assigned_to = null,
-        [Description("ID статуса эпика.")] int? status = null,
-        [Description("Цвет в формате HEX, например #ABCABC.")] string? color = null,
-        [Description("Эпик заблокирован.")] bool? is_blocked = null,
-        [Description("Причина блокировки.")] string? blocked_note = null,
-        [Description("Эпик закрыт.")] bool? is_closed = null,
-        [Description("Требование клиента.")] bool? client_requirement = null,
-        [Description("Требование команды.")] bool? team_requirement = null,
-        [Description("Порядок эпика (epics_order).")] int? epics_order = null,
-        [Description("Теги.")] string[]? tags = null,
-        [Description("ID наблюдателей.")] int[]? watchers = null,
+        [Description("Project ID (required).")] int project,
+        [Description("Epic subject (required).")] string subject,
+        [Description("Description.")] string? description = null,
+        [Description("ID of the assigned user.")] int? assigned_to = null,
+        [Description("Epic status ID.")] int? status = null,
+        [Description("Color in HEX format, for example #ABCABC.")] string? color = null,
+        [Description("The epic is blocked.")] bool? is_blocked = null,
+        [Description("Reason for the block.")] string? blocked_note = null,
+        [Description("The epic is closed.")] bool? is_closed = null,
+        [Description("Client requirement.")] bool? client_requirement = null,
+        [Description("Team requirement.")] bool? team_requirement = null,
+        [Description("Epic order (epics_order).")] int? epics_order = null,
+        [Description("Tags.")] string[]? tags = null,
+        [Description("Watcher IDs.")] int[]? watchers = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -103,23 +103,23 @@ public sealed class EpicTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_update_epic")]
-    [Description("Изменяет эпик. По умолчанию PATCH; replace_all=true — PUT. Для OCC передайте version.")]
+    [Description("Updates an epic. PATCH by default; replace_all=true uses PUT. Pass version for OCC.")]
     public Task<string> UpdateEpicAsync(
-        [Description("ID эпика.")] int epic_id,
-        [Description("Текущая версия объекта для OCC (рекомендуется).")] int? version = null,
-        [Description("Полная замена (PUT) вместо частичного изменения (PATCH).")] bool replace_all = false,
-        [Description("Заголовок.")] string? subject = null,
-        [Description("Описание.")] string? description = null,
-        [Description("ID назначенного пользователя.")] int? assigned_to = null,
-        [Description("ID статуса эпика.")] int? status = null,
-        [Description("Цвет в формате HEX.")] string? color = null,
-        [Description("Эпик заблокирован.")] bool? is_blocked = null,
-        [Description("Причина блокировки.")] string? blocked_note = null,
-        [Description("Эпик закрыт.")] bool? is_closed = null,
-        [Description("Требование клиента.")] bool? client_requirement = null,
-        [Description("Требование команды.")] bool? team_requirement = null,
-        [Description("Теги.")] string[]? tags = null,
-        [Description("ID наблюдателей.")] int[]? watchers = null,
+        [Description("Epic ID.")] int epic_id,
+        [Description("Current object version for OCC (recommended).")] int? version = null,
+        [Description("Replace the whole object (PUT) instead of a partial update (PATCH).")] bool replace_all = false,
+        [Description("Subject.")] string? subject = null,
+        [Description("Description.")] string? description = null,
+        [Description("ID of the assigned user.")] int? assigned_to = null,
+        [Description("Epic status ID.")] int? status = null,
+        [Description("Color in HEX format.")] string? color = null,
+        [Description("The epic is blocked.")] bool? is_blocked = null,
+        [Description("Reason for the block.")] string? blocked_note = null,
+        [Description("The epic is closed.")] bool? is_closed = null,
+        [Description("Client requirement.")] bool? client_requirement = null,
+        [Description("Team requirement.")] bool? team_requirement = null,
+        [Description("Tags.")] string[]? tags = null,
+        [Description("Watcher IDs.")] int[]? watchers = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -144,9 +144,9 @@ public sealed class EpicTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_delete_epic", Destructive = true)]
-    [Description("Удаляет эпик по ID.")]
+    [Description("Deletes an epic by ID.")]
     public Task<string> DeleteEpicAsync(
-        [Description("ID эпика.")] int epic_id,
+        [Description("Epic ID.")] int epic_id,
         CancellationToken cancellationToken = default)
     {
         return RunDestructiveAsync(
@@ -156,11 +156,11 @@ public sealed class EpicTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_bulk_create_epics")]
-    [Description("Массово создаёт эпики. Каждый элемент списка subjects — отдельный эпик.")]
+    [Description("Creates epics in bulk. Each item in subjects becomes one epic.")]
     public Task<string> BulkCreateEpicsAsync(
-        [Description("ID проекта (обязательно).")] int project_id,
-        [Description("Список заголовков эпиков (обязательно).")] string[] subjects,
-        [Description("ID статуса эпика.")] int? status_id = null,
+        [Description("Project ID (required).")] int project_id,
+        [Description("List of epic subjects (required).")] string[] subjects,
+        [Description("Epic status ID.")] int? status_id = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -174,19 +174,19 @@ public sealed class EpicTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_list_epic_related_userstories", ReadOnly = true)]
-    [Description("Возвращает список пользовательских историй, связанных с эпиком.")]
+    [Description("Lists the user stories related to an epic.")]
     public Task<string> ListEpicRelatedUserStoriesAsync(
-        [Description("ID эпика.")] int epic_id,
+        [Description("Epic ID.")] int epic_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.GetAsync($"epics/{epic_id}/related_userstories", disablePagination: null, ct: cancellationToken));
     }
 
     [McpServerTool(Name = "taiga_create_epic_related_userstory")]
-    [Description("Связывает пользовательскую историю с эпиком.")]
+    [Description("Links a user story to an epic.")]
     public Task<string> CreateEpicRelatedUserStoryAsync(
-        [Description("ID эпика.")] int epic_id,
-        [Description("ID пользовательской истории.")] int user_story_id,
+        [Description("Epic ID.")] int epic_id,
+        [Description("User story ID.")] int user_story_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -199,10 +199,10 @@ public sealed class EpicTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_delete_epic_related_userstory", Destructive = true)]
-    [Description("Удаляет связь пользовательской истории с эпиком.")]
+    [Description("Removes the link between a user story and an epic.")]
     public Task<string> DeleteEpicRelatedUserStoryAsync(
-        [Description("ID эпика.")] int epic_id,
-        [Description("ID пользовательской истории.")] int user_story_id,
+        [Description("Epic ID.")] int epic_id,
+        [Description("User story ID.")] int user_story_id,
         CancellationToken cancellationToken = default)
     {
         return RunDestructiveAsync(
@@ -212,27 +212,27 @@ public sealed class EpicTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_vote_epic")]
-    [Description("Голосует за эпик (upvote).")]
+    [Description("Votes for an epic (upvote).")]
     public Task<string> VoteEpicAsync(
-        [Description("ID эпика.")] int epic_id,
+        [Description("Epic ID.")] int epic_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.PostAsync($"epics/{epic_id}/upvote", ct: cancellationToken));
     }
 
     [McpServerTool(Name = "taiga_watch_epic")]
-    [Description("Подписаться на уведомления по эпику.")]
+    [Description("Subscribes to notifications for an epic.")]
     public Task<string> WatchEpicAsync(
-        [Description("ID эпика.")] int epic_id,
+        [Description("Epic ID.")] int epic_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.PostAsync($"epics/{epic_id}/watch", ct: cancellationToken));
     }
 
     [McpServerTool(Name = "taiga_unwatch_epic")]
-    [Description("Отписаться от уведомлений по эпику.")]
+    [Description("Unsubscribes from notifications for an epic.")]
     public Task<string> UnwatchEpicAsync(
-        [Description("ID эпика.")] int epic_id,
+        [Description("Epic ID.")] int epic_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.PostAsync($"epics/{epic_id}/unwatch", ct: cancellationToken));

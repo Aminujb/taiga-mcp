@@ -3,7 +3,7 @@ using TaigaMcp.Taiga;
 
 namespace TaigaMcp.Health;
 
-/// <summary>Результат проверки готовности.</summary>
+/// <summary>Result of a readiness check.</summary>
 public readonly record struct HealthResult(bool IsReady, string? Reason)
 {
     public static HealthResult Ready() => new(true, null);
@@ -11,12 +11,12 @@ public readonly record struct HealthResult(bool IsReady, string? Reason)
     public static HealthResult NotReady(string reason) => new(false, reason);
 }
 
-/// <summary>Логика проверок состояния сервера (вынесена отдельно для тестируемости).</summary>
+/// <summary>Server health check logic (kept separate so it can be tested).</summary>
 public static class HealthChecks
 {
     /// <summary>
-    /// Проверка готовности (readiness): конфигурация Taiga корректна и доступ к API
-    /// с текущими учётными данными работает. Использует лёгкий запрос users/me.
+    /// Readiness check: the Taiga configuration is valid and the API can be reached
+    /// with the current credentials. Uses the lightweight users/me request.
     /// </summary>
     public static async Task<HealthResult> CheckReadyAsync(
         TaigaClient client,
@@ -27,7 +27,7 @@ public static class HealthChecks
             !Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var uri) ||
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
-            return HealthResult.NotReady("BaseUrl не задан или имеет некорректный формат.");
+            return HealthResult.NotReady("BaseUrl is not set or has an invalid format.");
         }
 
         try

@@ -5,13 +5,13 @@ using TaigaMcp.Taiga;
 namespace TaigaMcp.Health;
 
 /// <summary>
-/// Кэширующий зонд готовности.
+/// Caching readiness probe.
 ///
-/// Раньше endpoint <c>/health/ready</c> выполнял реальный запрос <c>users/me</c> при каждом
-/// опросе: при интервале 5 секунд это ~17 000 запросов в сутки к Taiga. Теперь результат
-/// кэшируется, и повторные проверки не старше <see cref="HealthOptions.ReadyCacheSeconds"/>
-/// возвращают сохранённое состояние, а реальный запрос выполняется не чаще одного раза
-/// за интервал (с защитой от параллельных проверок).
+/// The <c>/health/ready</c> endpoint used to make a real <c>users/me</c> request on every
+/// poll: at a 5-second interval that is about 17,000 requests a day to Taiga. The result is
+/// now cached, and repeat checks no older than <see cref="HealthOptions.ReadyCacheSeconds"/>
+/// return the saved state, with the real request made at most once
+/// per interval (protected against parallel checks).
 /// </summary>
 public sealed class ReadinessProbe : IDisposable
 {
@@ -31,7 +31,7 @@ public sealed class ReadinessProbe : IDisposable
         _cacheSeconds = Math.Max(0, health.ReadyCacheSeconds);
     }
 
-    /// <summary>Возвращает состояние готовности, обновляя его не чаще заданного интервала.</summary>
+    /// <summary>Returns the readiness state, refreshing it at most once per interval.</summary>
     public async Task<HealthResult> GetAsync(CancellationToken ct = default)
     {
         if (TryGetFreshSnapshot(out var cached))
@@ -47,7 +47,7 @@ public sealed class ReadinessProbe : IDisposable
                 return cached;
             }
 
-            // Клиент создаём через scope: так соблюдается жизненный цикл IHttpClientFactory.
+            // The client is created through a scope to respect the IHttpClientFactory lifecycle.
             using var scope = _scopeFactory.CreateScope();
             var client = scope.ServiceProvider.GetRequiredService<TaigaClient>();
             var result = await HealthChecks.CheckReadyAsync(client, _options, ct).ConfigureAwait(false);

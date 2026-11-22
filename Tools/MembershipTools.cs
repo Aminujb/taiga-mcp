@@ -6,31 +6,31 @@ using TaigaMcp.Taiga;
 
 namespace TaigaMcp.Tools;
 
-/// <summary>Элемент массового приглашения участников.</summary>
+/// <summary>One item in a bulk member invitation.</summary>
 public sealed class BulkMembership
 {
-    [Description("ID роли, назначаемой участнику.")]
+    [Description("ID of the role assigned to the member.")]
     public int role_id { get; set; }
 
-    [Description("Логин или email приглашаемого пользователя.")]
+    [Description("Username or email of the invited user.")]
     public string username { get; set; } = string.Empty;
 
-    [Description("Дополнительный текст приглашения (необязательно).")]
+    [Description("Additional invitation text (optional).")]
     public string? invitation_extra_text { get; set; }
 }
 
-/// <summary>Инструменты управления участниками и приглашениями (Memberships/Invitations).</summary>
+/// <summary>Tools for managing memberships and invitations.</summary>
 [McpServerToolType]
 public sealed class MembershipTools : TaigaToolBase
 {
     public MembershipTools(TaigaClient client, AuditLogger audit, McpMetrics metrics) : base(client, audit, metrics) { }
 
     [McpServerTool(Name = "taiga_list_memberships", ReadOnly = true)]
-    [Description("Возвращает список участников/приглашений. Можно фильтровать по проекту и роли.")]
+    [Description("Lists members/invitations. Can be filtered by project and role.")]
     public Task<string> ListMembershipsAsync(
-        [Description("ID проекта.")] int? project = null,
-        [Description("ID роли.")] int? role = null,
-        [Description("Отключить пагинацию и вернуть все записи (по умолчанию true).")] bool? disable_pagination = null,
+        [Description("Project ID.")] int? project = null,
+        [Description("Role ID.")] int? role = null,
+        [Description("Disable pagination and return all records (default true).")] bool? disable_pagination = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(async () =>
@@ -45,20 +45,20 @@ public sealed class MembershipTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_get_membership", ReadOnly = true)]
-    [Description("Возвращает участника/приглашение по ID.")]
+    [Description("Gets a member/invitation by ID.")]
     public Task<string> GetMembershipAsync(
-        [Description("ID участника.")] int membership_id,
+        [Description("Member ID.")] int membership_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.GetAsync($"memberships/{membership_id}", disablePagination: null, ct: cancellationToken));
     }
 
     [McpServerTool(Name = "taiga_create_membership")]
-    [Description("Приглашает пользователя в проект (создаёт membership). Все параметры обязательны.")]
+    [Description("Invites a user to a project (creates a membership). All parameters are required.")]
     public Task<string> CreateMembershipAsync(
-        [Description("ID проекта (обязательно).")] int project,
-        [Description("ID роли, назначаемой участнику (обязательно).")] int role,
-        [Description("Логин или email приглашаемого пользователя (обязательно).")] string username,
+        [Description("Project ID (required).")] int project,
+        [Description("ID of the role assigned to the member (required).")] int role,
+        [Description("Username or email of the invited user (required).")] string username,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -72,10 +72,10 @@ public sealed class MembershipTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_bulk_create_memberships")]
-    [Description("Массово приглашает пользователей в проект.")]
+    [Description("Invites users to a project in bulk.")]
     public Task<string> BulkCreateMembershipsAsync(
-        [Description("ID проекта (обязательно).")] int project_id,
-        [Description("Список приглашаемых: role_id, username, invitation_extra_text (обязательно).")] BulkMembership[] bulk_memberships,
+        [Description("Project ID (required).")] int project_id,
+        [Description("List of invitees: role_id, username, invitation_extra_text (required).")] BulkMembership[] bulk_memberships,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -88,11 +88,11 @@ public sealed class MembershipTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_update_membership")]
-    [Description("Изменяет участника/приглашение (например, меняет роль).")]
+    [Description("Updates a member/invitation (for example changes the role).")]
     public Task<string> UpdateMembershipAsync(
-        [Description("ID участника.")] int membership_id,
-        [Description("ID новой роли.")] int? role = null,
-        [Description("Текущая версия объекта для OCC (необязательно).")] int? version = null,
+        [Description("Member ID.")] int membership_id,
+        [Description("New role ID.")] int? role = null,
+        [Description("Current object version for OCC (optional).")] int? version = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -105,9 +105,9 @@ public sealed class MembershipTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_delete_membership", Destructive = true)]
-    [Description("Удаляет участника или отменяет приглашение.")]
+    [Description("Removes a member or cancels an invitation.")]
     public Task<string> DeleteMembershipAsync(
-        [Description("ID участника/приглашения.")] int membership_id,
+        [Description("Member/invitation ID.")] int membership_id,
         CancellationToken cancellationToken = default)
     {
         return RunDestructiveAsync(
@@ -117,18 +117,18 @@ public sealed class MembershipTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_resend_invitation")]
-    [Description("Повторно отправляет приглашение участнику.")]
+    [Description("Resends an invitation to a member.")]
     public Task<string> ResendInvitationAsync(
-        [Description("ID участника/приглашения.")] int membership_id,
+        [Description("Member/invitation ID.")] int membership_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.PostAsync($"memberships/{membership_id}/resend_invitation", ct: cancellationToken));
     }
 
     [McpServerTool(Name = "taiga_get_invitation", ReadOnly = true)]
-    [Description("Возвращает приглашение по его токену (UUID).")]
+    [Description("Gets an invitation by its token (UUID).")]
     public Task<string> GetInvitationAsync(
-        [Description("UUID приглашения.")] string invitation_uuid,
+        [Description("Invitation UUID.")] string invitation_uuid,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.GetAsync($"invitations/{invitation_uuid}", disablePagination: null, ct: cancellationToken));

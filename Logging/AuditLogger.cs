@@ -5,15 +5,15 @@ using TaigaMcp.Configuration;
 namespace TaigaMcp.Logging;
 
 /// <summary>
-/// Аудит-лог вызовов деструктивных инструментов MCP.
+/// Audit log of destructive MCP tool calls.
 ///
-/// Каждый вызов фиксируется структурированной записью в <see cref="ILogger"/>
-/// (категория "TaigaMcp.Audit") и, если задан <see cref="AuditOptions.FilePath"/>,
-/// дополнительно дописывается JSON-строкой в файл (формат JSON Lines).
+/// Each call is recorded as a structured entry in <see cref="ILogger"/>
+/// (category "TaigaMcp.Audit") and, if <see cref="AuditOptions.FilePath"/> is set,
+/// also appended to the file as a JSON line (JSON Lines format).
 /// </summary>
 public sealed class AuditLogger
 {
-    // Аудит-файл: компактные однострочные записи, кириллица не экранируется.
+    // Audit file: compact single-line entries; non-ASCII text is not escaped.
     private static readonly JsonSerializerOptions FileJsonOptions = new()
     {
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
@@ -33,12 +33,12 @@ public sealed class AuditLogger
     }
 
     /// <summary>
-    /// Записывает результат вызова деструктивного инструмента.
+    /// Records the result of a destructive tool call.
     /// </summary>
-    /// <param name="tool">Имя инструмента MCP (например, taiga_delete_project).</param>
-    /// <param name="arguments">Аргументы вызова (анонимный объект или словарь).</param>
-    /// <param name="success">Успешно ли завершился вызов.</param>
-    /// <param name="error">Текст ошибки при неуспехе.</param>
+    /// <param name="tool">MCP tool name (for example taiga_delete_project).</param>
+    /// <param name="arguments">Call arguments (an anonymous object or dictionary).</param>
+    /// <param name="success">Whether the call succeeded.</param>
+    /// <param name="error">Error text on failure.</param>
     public void Record(string tool, object? arguments, bool success, string? error)
     {
         if (!_options.Enabled)
@@ -100,15 +100,15 @@ public sealed class AuditLogger
         }
         catch (Exception ex)
         {
-            // Ошибка записи аудит-лога не должна ломать выполнение инструмента.
-            _logger.LogWarning(ex, "Не удалось записать аудит-лог в файл {FilePath}", _options.FilePath);
+            // A failure to write the audit log must not break the tool call.
+            _logger.LogWarning(ex, "Failed to write the audit log to file {FilePath}", _options.FilePath);
         }
     }
 
     /// <summary>
-    /// Ротирует аудит-файл при достижении <see cref="AuditOptions.MaxFileSizeMB"/>:
-    /// сдвигает архивные копии (.1 … .N), удаляет самую старую и создаёт новый файл.
-    /// Вызывается под <c>_fileLock</c>.
+    /// Rotates the audit file when it reaches <see cref="AuditOptions.MaxFileSizeMB"/>:
+    /// shifts the archived copies (.1 … .N), deletes the oldest and creates a new file.
+    /// Called while holding <c>_fileLock</c>.
     /// </summary>
     private void RotateIfNeeded(string path)
     {
@@ -142,7 +142,7 @@ public sealed class AuditLogger
 
         File.Move(path, path + ".1", overwrite: true);
         _logger.LogInformation(
-            "Аудит-лог {FilePath} достиг {MaxSizeMB} МБ и ротирован ({Backups} архивных копий).",
+            "Audit log {FilePath} reached {MaxSizeMB} MB and was rotated ({Backups} archived copies).",
             path,
             _options.MaxFileSizeMB,
             _options.MaxBackupFiles);
