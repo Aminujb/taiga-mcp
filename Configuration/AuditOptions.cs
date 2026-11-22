@@ -1,31 +1,31 @@
 namespace TaigaMcp.Configuration;
 
 /// <summary>
-/// Настройки аудит-лога деструктивных операций.
-/// Берутся из секции "Audit" и могут быть переопределены переменными
+/// Settings for the audit log of destructive operations.
+/// Read from the "Audit" section and can be overridden by environment variables
 /// AUDIT_ENABLED / AUDIT_FILE_PATH.
 /// </summary>
 public sealed class AuditOptions
 {
-    /// <summary>Включён ли аудит-лог.</summary>
+    /// <summary>Whether the audit log is enabled.</summary>
     public bool Enabled { get; set; } = true;
 
     /// <summary>
-    /// Путь к файлу аудит-лога (формат JSON Lines).
-    /// Если пусто — записи идут только в ILogger (категория "TaigaMcp.Audit").
-    /// Относительный путь разрешается относительно каталога сборки.
+    /// Path to the audit log file (JSON Lines format).
+    /// If empty, entries go to ILogger only (category "TaigaMcp.Audit").
+    /// A relative path is resolved against the build output directory.
     /// </summary>
     public string? FilePath { get; set; } = "logs/audit.log";
 
     /// <summary>
-    /// Максимальный размер аудит-файла в мегабайтах до ротации. 0 — ротация отключена.
-    /// По умолчанию 64 МБ.
+    /// Maximum audit file size in megabytes before rotation. 0 disables rotation.
+    /// Defaults to 64 MB.
     /// </summary>
     public int MaxFileSizeMB { get; set; } = 64;
 
     /// <summary>
-    /// Число архивных копий при ротации (audit.log.1 … audit.log.N).
-    /// Самый старый файл удаляется.
+    /// Number of archived copies kept on rotation (audit.log.1 … audit.log.N).
+    /// The oldest file is deleted.
     /// </summary>
     public int MaxBackupFiles { get; set; } = 5;
 }

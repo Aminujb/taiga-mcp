@@ -111,8 +111,8 @@ public class AuditLoggerTests
     [Fact]
     public void Record_WhenFileWriteFails_DoesNotThrow()
     {
-        // Путь указывает на существующий каталог — запись в файл завершится ошибкой,
-        // которая должна быть проглочена и залогирована как предупреждение.
+        // The path points to an existing directory, so writing to the file fails,
+        // and that failure must be swallowed and logged as a warning.
         var capturing = new CapturingLogger<AuditLogger>();
         var options = new AuditOptions { Enabled = true, FilePath = Path.GetTempPath() };
         var logger = new AuditLogger(capturing, new HttpContextAccessor(), options);
@@ -127,7 +127,7 @@ public class AuditLoggerTests
     public void Record_RotatesFileWhenSizeLimitReached()
     {
         var path = Path.Combine(Path.GetTempPath(), $"audit-{Guid.NewGuid():N}.log");
-        File.WriteAllText(path, new string('x', 1_100_000)); // > 1 МБ
+        File.WriteAllText(path, new string('x', 1_100_000)); // > 1 MB
         var options = new AuditOptions
         {
             Enabled = true,
@@ -175,7 +175,7 @@ public class AuditLoggerTests
         {
             logger.Record("taiga_delete_project", new { project_id = 1 }, success: true, error: null);
 
-            // Самый старый (.2) удалён, старый .1 сдвинут в .2, исходный файл стал .1.
+            // The oldest (.2) is deleted, the old .1 moved to .2, and the original file became .1.
             Assert.Equal("backup-1", File.ReadAllText(path + ".2"));
             Assert.True(new FileInfo(path + ".1").Length > 1_000_000);
         }

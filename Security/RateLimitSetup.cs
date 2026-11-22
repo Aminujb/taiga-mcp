@@ -8,12 +8,12 @@ using TaigaMcp.Configuration;
 namespace TaigaMcp.Security;
 
 /// <summary>
-/// Настройка ограничения частоты запросов к MCP-эндпоинту.
-/// Ключ разделения (partition) — токен доступа (стабильный хэш) либо IP клиента.
+/// Configures rate limiting for the MCP endpoint.
+/// The partition key is the access token (stable hash) or the client IP.
 /// </summary>
 public static class RateLimitSetup
 {
-    /// <summary>Создаёт раздел лимитера для конкретного запроса.</summary>
+    /// <summary>Creates the limiter partition for a specific request.</summary>
     public static RateLimitPartition<string> CreatePartition(HttpContext context, RateLimitOptions options)
         => RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: ResolvePartitionKey(context),
@@ -27,8 +27,8 @@ public static class RateLimitSetup
             });
 
     /// <summary>
-    /// Определяет ключ разделения: хэш токена доступа, если он передан,
-    /// иначе строковый адрес клиента.
+    /// Determines the partition key: a hash of the access token if one was sent,
+    /// otherwise the client's address as a string.
     /// </summary>
     public static string ResolvePartitionKey(HttpContext context)
     {

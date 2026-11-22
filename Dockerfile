@@ -1,25 +1,25 @@
 # syntax=docker/dockerfile:1
 
 # ---------------------------------------------------------------------------
-# Образ MCP-сервера Taiga.
+# Taiga MCP server image.
 #
-#  - приложение устанавливается в /opt/mcp;
-#  - процесс запускается от непривилегированного пользователя (app, UID 1654);
-#  - параметры запуска задаются переменными окружения (ENV / --env-file);
-#  - конфигурацию (appsettings.Local.json) и сертификаты монтируют как файлы
-#    при запуске, а не встраивают в образ (см. README.md, раздел "Docker").
+#  - the application is installed in /opt/mcp;
+#  - the process runs as an unprivileged user (app, UID 1654);
+#  - startup parameters come from environment variables (ENV / --env-file);
+#  - configuration (appsettings.Local.json) and certificates are mounted as files
+#    at startup, not baked into the image (see the "Docker" section of README.md).
 # ---------------------------------------------------------------------------
 
-# ------------------------------ Сборка -------------------------------------
+# ------------------------------ Build --------------------------------------
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Сначала только манифесты — так слой restore кэшируется между сборками.
+# Manifests first, so the restore layer is cached between builds.
 COPY global.json ./
 COPY TaigaMcp.csproj ./
 RUN dotnet restore TaigaMcp.csproj
 
-# Затем исходный код и публикация в /opt/mcp внутри промежуточного образа.
+# Then the source code, published to /opt/mcp inside the intermediate image.
 COPY . .
 RUN dotnet publish TaigaMcp.csproj \
         -c Release \
@@ -27,14 +27,14 @@ RUN dotnet publish TaigaMcp.csproj \
         --no-restore \
         /p:UseAppHost=false
 
-# ------------------------------ Запуск -------------------------------------
+# ------------------------------ Runtime ------------------------------------
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 
-# Приложение располагается строго в /opt/mcp.
+# The application lives in /opt/mcp.
 WORKDIR /opt/mcp
 
-# Значения по умолчанию. Любое из них можно переопределить через ENV / --env-file
-# или через смонтированный appsettings.Local.json.
+# Default values. Any of them can be overridden through ENV / --env-file
+# or a mounted appsettings.Local.json.
 ENV DOTNET_EnableDiagnostics=0 \
     MCP_HOST=0.0.0.0 \
     MCP_PORT=8080 \
@@ -42,14 +42,14 @@ ENV DOTNET_EnableDiagnostics=0 \
 
 COPY --from=build /opt/mcp /opt/mcp
 
-# Каталоги под аудит-лог и сертификаты (точки монтирования). curl — для HEALTHCHECK.
+# Directories for the audit log and certificates (mount points). curl is for HEALTHCHECK.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/* \
  && mkdir -p /opt/mcp/logs /opt/mcp/certs \
  && chown -R app:app /opt/mcp
 
-# Запуск не от root: пользователь app (UID 1654) уже есть в образах .NET 8.
+# Run as non-root: the app user (UID 1654) already exists in .NET 8 images.
 USER $APP_UID
 
 EXPOSE 8080

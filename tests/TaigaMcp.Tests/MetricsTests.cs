@@ -16,7 +16,7 @@ public class MetricsTests
         return Encoding.UTF8.GetString(stream.ToArray());
     }
 
-    // Суммирует значения всех образцов указанной метрики (без учёта меток).
+    // Sums the values of all samples of the given metric (ignoring labels).
     private static double SumMetric(string exposition, string metricName)
     {
         double total = 0;

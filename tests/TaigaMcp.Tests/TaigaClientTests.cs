@@ -119,7 +119,7 @@ public class TaigaClientTests
         var request = Assert.Single(handler.Requests);
         Assert.Equal("True", request.Header("x-disable-pagination"));
         Assert.Contains("member=5", request.Uri);
-        // Пробел в значении кодируется как %20; Uri может отображать его и как пробел.
+        // A space in a value is encoded as %20; Uri may also display it as a space.
         Assert.True(
             request.Uri.Contains("q=a%20b", StringComparison.Ordinal) ||
             request.Uri.Contains("q=a b", StringComparison.Ordinal),
@@ -203,7 +203,7 @@ public class TaigaClientTests
 
         await client.GetAsync("projects");
 
-        // Обновление токена выполнено, обычный вход по логину/паролю не потребовался.
+        // The token was refreshed, so a normal username/password login wasn't needed.
         Assert.Contains(handler.Requests, r => r.Method == HttpMethod.Post && r.Uri.Contains("/auth/refresh"));
         Assert.DoesNotContain(handler.Requests, r =>
             r.Method == HttpMethod.Post && r.Uri.EndsWith("/auth", StringComparison.Ordinal));
@@ -266,7 +266,7 @@ public class TaigaClientTests
 
         var (client, _) = CreateClient(options, (request, _) =>
             request.Uri.Contains("/auth", StringComparison.OrdinalIgnoreCase)
-                ? FakeHttpMessageHandler.Json(HttpStatusCode.OK, "это вовсе не JSON")
+                ? FakeHttpMessageHandler.Json(HttpStatusCode.OK, "this is not JSON at all")
                 : FakeHttpMessageHandler.Json(HttpStatusCode.OK, "[]"));
 
         await Assert.ThrowsAsync<TaigaApiException>(() => client.GetAsync("projects"));

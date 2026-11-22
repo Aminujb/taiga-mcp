@@ -1,30 +1,30 @@
 # ---------------------------------------------------------------------------
-# Контекст сборки Docker для MCP-сервера Taiga.
-# Цель — не тащить в образ артефакты сборки, секреты и сертификаты.
+# Docker build context for the Taiga MCP server.
+# Goal: keep build artifacts, secrets and certificates out of the image.
 # ---------------------------------------------------------------------------
 
-# Результаты сборки и IDE
+# Build output and IDE files
 **/bin/
 **/obj/
 .vs/
 .vscode/
 .idea/
 
-# Тесты и покрытие (в образ не нужны)
+# Tests and coverage (not needed in the image)
 tests/
 TestResults/
 *.trx
 *.coverage
 *.coveragexml
 
-# Секреты и локальные настройки — монтируются при запуске, а не встраиваются
+# Secrets and local settings: mounted at startup, never baked in
 appsettings.Local.json
 appsettings.*.Local.json
 secrets.json
 *.secrets.json
 .env
 
-# Сертификаты — монтируются при запуске
+# Certificates: mounted at startup
 certs/
 *.pfx
 *.p12
@@ -33,7 +33,7 @@ certs/
 *.crt
 *.cer
 
-# Служебное
+# Miscellaneous
 .git/
 .gitignore
 *.md

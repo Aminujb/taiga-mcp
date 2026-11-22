@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Нужен для IHttpContextAccessor / DefaultHttpContext в тестах аудита. -->
+    <!-- Needed for IHttpContextAccessor / DefaultHttpContext in the audit tests. -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 

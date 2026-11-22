@@ -1,16 +1,16 @@
 namespace TaigaMcp.Configuration;
 
 /// <summary>
-/// Настройки проверок состояния (секция "Health").
-/// Переопределяются переменной окружения HEALTH_READY_CACHE_SECONDS.
+/// Health check settings (the "Health" section).
+/// Overridden by the HEALTH_READY_CACHE_SECONDS environment variable.
 /// </summary>
 public sealed class HealthOptions
 {
     /// <summary>
-    /// Время кэширования результата проверки готовности (readiness) в секундах.
-    /// Реальный запрос к Taiga выполняется не чаще одного раза за этот интервал,
-    /// а частые опросы (например, каждые 5 секунд) получают сохранённый результат.
-    /// 0 — проверять доступность при каждом запросе.
+    /// How long the readiness check result is cached, in seconds.
+    /// The real request to Taiga runs at most once per interval,
+    /// and frequent polls (for example every 5 seconds) get the saved result.
+    /// 0 checks availability on every request.
     /// </summary>
     public int ReadyCacheSeconds { get; set; } = 60;
 }

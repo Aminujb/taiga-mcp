@@ -17,7 +17,7 @@ public class GracefulShutdownTests
 
         Assert.True(lifetime.StopRequested);
         Assert.Contains(logger.Messages, message =>
-            message.Contains("остановка", StringComparison.OrdinalIgnoreCase));
+            message.Contains("shutdown", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class GracefulShutdownTests
         using var cts = new CancellationTokenSource();
         var lifetime = new RecordingHostApplicationLifetime(cts.Token);
 
-        // Отключаем подписку на глобальные события, чтобы не влиять на другие тесты.
+        // Turn off the global event subscription so other tests aren't affected.
         GracefulShutdown.Register(
             logger,
             lifetime,
@@ -47,8 +47,8 @@ public class GracefulShutdownTests
         cts.Cancel();
 
         Assert.Contains(logger.Messages, message =>
-            message.Contains("завершаем работу", StringComparison.OrdinalIgnoreCase));
+            message.Contains("shutting down", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(logger.Messages, message =>
-            message.Contains("остановлен", StringComparison.OrdinalIgnoreCase));
+            message.Contains("stopped", StringComparison.OrdinalIgnoreCase));
     }
 }

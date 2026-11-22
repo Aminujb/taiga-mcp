@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <!-- Целевая платформа строго .NET 8.0 по требованию задачи -->
+    <!-- Target platform is strictly .NET 8.0 -->
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -11,20 +11,20 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Официальный C# SDK для MCP: ядро + HTTP/SSE транспорт для ASP.NET Core -->
+    <!-- Official C# SDK for MCP: core plus the HTTP/SSE transport for ASP.NET Core -->
     <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
     <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Локальные секреты и сертификаты кладём рядом со сборкой (не коммитятся) -->
+    <!-- Local secrets and certificates are copied next to the build output (never committed) -->
     <Content Update="appsettings.Local.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Condition="Exists('appsettings.Local.json')" />
     <Content Include="certs\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Каталог с тестовым проектом не компилируем в составе основного приложения -->
+    <!-- The test project is not compiled as part of the main application -->
     <Compile Remove="tests\**" />
     <Content Remove="tests\**" />
     <None Remove="tests\**" />

@@ -3,7 +3,7 @@ using System.Text;
 
 namespace TaigaMcp.Tests.Support;
 
-/// <summary>Зафиксированный HTTP-запрос для проверок в тестах.</summary>
+/// <summary>A captured HTTP request for test assertions.</summary>
 internal sealed record CapturedRequest(
     HttpMethod Method,
     string Uri,
@@ -17,7 +17,7 @@ internal sealed record CapturedRequest(
         => Method == method && Uri.Contains(pathContains, StringComparison.OrdinalIgnoreCase);
 }
 
-/// <summary>Поддельный HTTP-обработчик, возвращающий заранее заданные ответы.</summary>
+/// <summary>Fake HTTP handler that returns preset responses.</summary>
 internal sealed class FakeHttpMessageHandler : HttpMessageHandler
 {
     private readonly Func<CapturedRequest, IReadOnlyList<CapturedRequest>, HttpResponseMessage> _responder;

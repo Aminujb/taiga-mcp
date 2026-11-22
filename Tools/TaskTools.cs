@@ -6,26 +6,26 @@ using TaigaMcp.Taiga;
 
 namespace TaigaMcp.Tools;
 
-/// <summary>Инструменты управления задачами Taiga (Tasks).</summary>
+/// <summary>Tools for managing Taiga tasks.</summary>
 [McpServerToolType]
 public sealed class TaskTools : TaigaToolBase
 {
     public TaskTools(TaigaClient client, AuditLogger audit, McpMetrics metrics) : base(client, audit, metrics) { }
 
     [McpServerTool(Name = "taiga_list_tasks", ReadOnly = true)]
-    [Description("Возвращает список задач с фильтрами.")]
+    [Description("Lists tasks, with filters.")]
     public Task<string> ListTasksAsync(
-        [Description("ID проекта.")] int? project = null,
-        [Description("ID статуса.")] int? status = null,
-        [Description("ID пользовательской истории.")] int? user_story = null,
-        [Description("ID milestone (спринта).")] int? milestone = null,
-        [Description("ID владельца.")] int? owner = null,
-        [Description("ID назначенного пользователя.")] int? assigned_to = null,
-        [Description("ID роли.")] int? role = null,
-        [Description("ID наблюдателя (watcher).")] int? watchers = null,
-        [Description("Статус закрыт (true/false).")] bool? status__is_closed = null,
-        [Description("Теги через запятую.")] string? tags = null,
-        [Description("Отключить пагинацию и вернуть все записи (по умолчанию true).")] bool? disable_pagination = null,
+        [Description("Project ID.")] int? project = null,
+        [Description("Status ID.")] int? status = null,
+        [Description("User story ID.")] int? user_story = null,
+        [Description("Milestone (sprint) ID.")] int? milestone = null,
+        [Description("Owner ID.")] int? owner = null,
+        [Description("ID of the assigned user.")] int? assigned_to = null,
+        [Description("Role ID.")] int? role = null,
+        [Description("Watcher ID.")] int? watchers = null,
+        [Description("Whether the status is closed (true/false).")] bool? status__is_closed = null,
+        [Description("Comma-separated tags.")] string? tags = null,
+        [Description("Disable pagination and return all records (default true).")] bool? disable_pagination = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(async () =>
@@ -48,20 +48,20 @@ public sealed class TaskTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_get_task", ReadOnly = true)]
-    [Description("Возвращает задачу по ID.")]
+    [Description("Gets a task by ID.")]
     public Task<string> GetTaskAsync(
-        [Description("ID задачи.")] int task_id,
+        [Description("Task ID.")] int task_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.GetAsync($"tasks/{task_id}", disablePagination: null, ct: cancellationToken));
     }
 
     [McpServerTool(Name = "taiga_get_task_by_ref", ReadOnly = true)]
-    [Description("Возвращает задачу по её номеру (ref) внутри проекта.")]
+    [Description("Gets a task by its number (ref) within a project.")]
     public Task<string> GetTaskByRefAsync(
-        [Description("Номер задачи (ref).")] int @ref,
-        [Description("ID проекта.")] int? project = null,
-        [Description("Slug проекта.")] string? project__slug = null,
+        [Description("Task number (ref).")] int @ref,
+        [Description("Project ID.")] int? project = null,
+        [Description("Project slug.")] string? project__slug = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.GetAsync("tasks/by_ref",
@@ -75,24 +75,24 @@ public sealed class TaskTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_create_task")]
-    [Description("Создаёт задачу. Обязательны project и subject.")]
+    [Description("Creates a task. project and subject are required.")]
     public Task<string> CreateTaskAsync(
-        [Description("ID проекта (обязательно).")] int project,
-        [Description("Заголовок задачи (обязательно).")] string subject,
-        [Description("Описание.")] string? description = null,
-        [Description("ID пользовательской истории.")] int? user_story = null,
-        [Description("ID статуса.")] int? status = null,
-        [Description("ID назначенного пользователя.")] int? assigned_to = null,
-        [Description("ID milestone (спринта).")] int? milestone = null,
-        [Description("Задача заблокирована.")] bool? is_blocked = null,
-        [Description("Причина блокировки.")] string? blocked_note = null,
-        [Description("Задача закрыта.")] bool? is_closed = null,
-        [Description("Метка iocaine.")] bool? is_iocaine = null,
-        [Description("Теги.")] string[]? tags = null,
-        [Description("ID наблюдателей.")] int[]? watchers = null,
-        [Description("Порядок относительно истории (us_order).")] int? us_order = null,
-        [Description("Порядок на taskboard.")] int? taskboard_order = null,
-        [Description("Внешняя ссылка [\"service\", \"serviceId\"].")] string[]? external_reference = null,
+        [Description("Project ID (required).")] int project,
+        [Description("Task subject (required).")] string subject,
+        [Description("Description.")] string? description = null,
+        [Description("User story ID.")] int? user_story = null,
+        [Description("Status ID.")] int? status = null,
+        [Description("ID of the assigned user.")] int? assigned_to = null,
+        [Description("Milestone (sprint) ID.")] int? milestone = null,
+        [Description("The task is blocked.")] bool? is_blocked = null,
+        [Description("Reason for the block.")] string? blocked_note = null,
+        [Description("The task is closed.")] bool? is_closed = null,
+        [Description("The iocaine flag.")] bool? is_iocaine = null,
+        [Description("Tags.")] string[]? tags = null,
+        [Description("Watcher IDs.")] int[]? watchers = null,
+        [Description("Order within the user story (us_order).")] int? us_order = null,
+        [Description("Order on the taskboard.")] int? taskboard_order = null,
+        [Description("External reference [\"service\", \"serviceId\"].")] string[]? external_reference = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -121,21 +121,21 @@ public sealed class TaskTools : TaigaToolBase
     [McpServerTool(Name = "taiga_update_task")]
     [Description("Partially updates a task (PATCH): only the fields given change. Pass version for optimistic concurrency. comment adds a comment to the ticket's history.")]
     public Task<string> UpdateTaskAsync(
-        [Description("ID задачи.")] int task_id,
-        [Description("Текущая версия объекта для OCC (рекомендуется).")] int? version = null,
+        [Description("Task ID.")] int task_id,
+        [Description("Current object version for OCC (recommended).")] int? version = null,
         [Description("Comment added to the ticket's history with this change.")] string? comment = null,
-        [Description("Заголовок.")] string? subject = null,
-        [Description("Описание.")] string? description = null,
-        [Description("ID пользовательской истории.")] int? user_story = null,
-        [Description("ID статуса.")] int? status = null,
-        [Description("ID назначенного пользователя.")] int? assigned_to = null,
-        [Description("ID milestone (спринта).")] int? milestone = null,
-        [Description("Задача заблокирована.")] bool? is_blocked = null,
-        [Description("Причина блокировки.")] string? blocked_note = null,
-        [Description("Задача закрыта.")] bool? is_closed = null,
-        [Description("Метка iocaine.")] bool? is_iocaine = null,
-        [Description("Теги.")] string[]? tags = null,
-        [Description("ID наблюдателей.")] int[]? watchers = null,
+        [Description("Subject.")] string? subject = null,
+        [Description("Description.")] string? description = null,
+        [Description("User story ID.")] int? user_story = null,
+        [Description("Status ID.")] int? status = null,
+        [Description("ID of the assigned user.")] int? assigned_to = null,
+        [Description("Milestone (sprint) ID.")] int? milestone = null,
+        [Description("The task is blocked.")] bool? is_blocked = null,
+        [Description("Reason for the block.")] string? blocked_note = null,
+        [Description("The task is closed.")] bool? is_closed = null,
+        [Description("The iocaine flag.")] bool? is_iocaine = null,
+        [Description("Tags.")] string[]? tags = null,
+        [Description("Watcher IDs.")] int[]? watchers = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -161,9 +161,9 @@ public sealed class TaskTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_delete_task", Destructive = true)]
-    [Description("Удаляет задачу по ID.")]
+    [Description("Deletes a task by ID.")]
     public Task<string> DeleteTaskAsync(
-        [Description("ID задачи.")] int task_id,
+        [Description("Task ID.")] int task_id,
         CancellationToken cancellationToken = default)
     {
         return RunDestructiveAsync(
@@ -173,13 +173,13 @@ public sealed class TaskTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_bulk_create_tasks")]
-    [Description("Массово создаёт задачи. Каждый элемент списка subjects — отдельная задача.")]
+    [Description("Creates tasks in bulk. Each item in subjects becomes one task.")]
     public Task<string> BulkCreateTasksAsync(
-        [Description("ID проекта (обязательно).")] int project_id,
-        [Description("Список заголовков задач (обязательно).")] string[] subjects,
-        [Description("ID статуса.")] int? status_id = null,
-        [Description("ID milestone (спринта).")] int? milestone_id = null,
-        [Description("ID пользовательской истории.")] int? us_id = null,
+        [Description("Project ID (required).")] int project_id,
+        [Description("List of task subjects (required).")] string[] subjects,
+        [Description("Status ID.")] int? status_id = null,
+        [Description("Milestone (sprint) ID.")] int? milestone_id = null,
+        [Description("User story ID.")] int? us_id = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -195,18 +195,18 @@ public sealed class TaskTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_watch_task")]
-    [Description("Подписаться на уведомления по задаче.")]
+    [Description("Subscribes to notifications for a task.")]
     public Task<string> WatchTaskAsync(
-        [Description("ID задачи.")] int task_id,
+        [Description("Task ID.")] int task_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.PostAsync($"tasks/{task_id}/watch", ct: cancellationToken));
     }
 
     [McpServerTool(Name = "taiga_unwatch_task")]
-    [Description("Отписаться от уведомлений по задаче.")]
+    [Description("Unsubscribes from notifications for a task.")]
     public Task<string> UnwatchTaskAsync(
-        [Description("ID задачи.")] int task_id,
+        [Description("Task ID.")] int task_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.PostAsync($"tasks/{task_id}/unwatch", ct: cancellationToken));

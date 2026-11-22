@@ -6,17 +6,17 @@ using TaigaMcp.Taiga;
 
 namespace TaigaMcp.Tools;
 
-/// <summary>Инструменты управления ролями проекта Taiga (Roles).</summary>
+/// <summary>Tools for managing Taiga project roles.</summary>
 [McpServerToolType]
 public sealed class RoleTools : TaigaToolBase
 {
     public RoleTools(TaigaClient client, AuditLogger audit, McpMetrics metrics) : base(client, audit, metrics) { }
 
     [McpServerTool(Name = "taiga_list_roles", ReadOnly = true)]
-    [Description("Возвращает список ролей. Можно отфильтровать по проекту.")]
+    [Description("Lists roles. Can be filtered by project.")]
     public Task<string> ListRolesAsync(
-        [Description("ID проекта.")] int? project = null,
-        [Description("Отключить пагинацию и вернуть все записи (по умолчанию true).")] bool? disable_pagination = null,
+        [Description("Project ID.")] int? project = null,
+        [Description("Disable pagination and return all records (default true).")] bool? disable_pagination = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(async () =>
@@ -27,22 +27,22 @@ public sealed class RoleTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_get_role", ReadOnly = true)]
-    [Description("Возвращает роль по ID.")]
+    [Description("Gets a role by ID.")]
     public Task<string> GetRoleAsync(
-        [Description("ID роли.")] int role_id,
+        [Description("Role ID.")] int role_id,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() => Client.GetAsync($"roles/{role_id}", disablePagination: null, ct: cancellationToken));
     }
 
     [McpServerTool(Name = "taiga_create_role")]
-    [Description("Создаёт роль в проекте. Обязательны name и project.")]
+    [Description("Creates a role in a project. name and project are required.")]
     public Task<string> CreateRoleAsync(
-        [Description("ID проекта (обязательно).")] int project,
-        [Description("Название роли (обязательно).")] string name,
-        [Description("Порядок роли.")] int? order = null,
-        [Description("Роль учитывает оценки (true/false).")] bool? computable = null,
-        [Description("Список разрешений, например: view_us, view_project, add_us и т.п.")] string[]? permissions = null,
+        [Description("Project ID (required).")] int project,
+        [Description("Role name (required).")] string name,
+        [Description("Role order.")] int? order = null,
+        [Description("The role counts toward estimates (true/false).")] bool? computable = null,
+        [Description("List of permissions, for example: view_us, view_project, add_us, etc.")] string[]? permissions = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -58,15 +58,15 @@ public sealed class RoleTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_update_role")]
-    [Description("Изменяет роль. По умолчанию PATCH; replace_all=true — PUT.")]
+    [Description("Updates a role. PATCH by default; replace_all=true uses PUT.")]
     public Task<string> UpdateRoleAsync(
-        [Description("ID роли.")] int role_id,
-        [Description("Текущая версия объекта для OCC (необязательно).")] int? version = null,
-        [Description("Полная замена (PUT) вместо частичного изменения (PATCH).")] bool replace_all = false,
-        [Description("Новое название роли.")] string? name = null,
-        [Description("Порядок роли.")] int? order = null,
-        [Description("Роль учитывает оценки (true/false).")] bool? computable = null,
-        [Description("Список разрешений.")] string[]? permissions = null,
+        [Description("Role ID.")] int role_id,
+        [Description("Current object version for OCC (optional).")] int? version = null,
+        [Description("Replace the whole object (PUT) instead of a partial update (PATCH).")] bool replace_all = false,
+        [Description("New role name.")] string? name = null,
+        [Description("Role order.")] int? order = null,
+        [Description("The role counts toward estimates (true/false).")] bool? computable = null,
+        [Description("List of permissions.")] string[]? permissions = null,
         CancellationToken cancellationToken = default)
     {
         return RunAsync(() =>
@@ -83,10 +83,10 @@ public sealed class RoleTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_delete_role", Destructive = true)]
-    [Description("Удаляет роль. Можно указать move_to — ID роли, на которую переназначить пользователей.")]
+    [Description("Deletes a role. move_to can give the ID of a role to reassign its users to.")]
     public Task<string> DeleteRoleAsync(
-        [Description("ID роли.")] int role_id,
-        [Description("ID роли, на которую переназначить пользователей удаляемой роли.")] int? move_to = null,
+        [Description("Role ID.")] int role_id,
+        [Description("ID of the role to reassign the deleted role's users to.")] int? move_to = null,
         CancellationToken cancellationToken = default)
     {
         return RunDestructiveAsync(

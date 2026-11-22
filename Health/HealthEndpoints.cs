@@ -1,11 +1,11 @@
 namespace TaigaMcp.Health;
 
 /// <summary>
-/// Регистрация health-эндпоинтов (не являются частью MCP):
-///  - /health      — общая проверка (совместимость);
-///  - /health/live — liveness: процесс жив и отвечает;
-///  - /health/ready— readiness: настроен и доступен доступ к Taiga API
-///                   (результат кэшируется через <see cref="ReadinessProbe"/>).
+/// Registers the health endpoints (not part of MCP):
+///  - /health      - general check (compatibility);
+///  - /health/live - liveness: the process is alive and responding;
+///  - /health/ready- readiness: configured and able to reach the Taiga API
+///                   (the result is cached through <see cref="ReadinessProbe"/>).
 /// </summary>
 public static class HealthEndpoints
 {

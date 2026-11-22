@@ -5,27 +5,27 @@ using TaigaMcp.Configuration;
 namespace TaigaMcp.Hosting;
 
 /// <summary>
-/// Корректное завершение работы сервера:
-///  - логирование сигналов остановки (SIGTERM / Ctrl+C);
-///  - инициирование остановки при необработанном исключении (если включено).
-/// Таймаут ожидания задаётся через <see cref="HostOptions.ShutdownTimeout"/> в Program.
+/// Graceful server shutdown:
+///  - logs stop signals (SIGTERM / Ctrl+C);
+///  - starts a shutdown on an unhandled exception (if enabled).
+/// The wait timeout is set through <see cref="HostOptions.ShutdownTimeout"/> in Program.
 /// </summary>
 public static class GracefulShutdown
 {
-    /// <summary>Логгер по умолчанию для событий завершения.</summary>
+    /// <summary>Default logger category for shutdown events.</summary>
     public const string LoggerCategory = "TaigaMcp.Shutdown";
 
-    /// <summary>Регистрирует обработчики событий завершения и критических ошибок.</summary>
+    /// <summary>Registers handlers for shutdown events and critical errors.</summary>
     public static void Register(
         ILogger logger,
         IHostApplicationLifetime lifetime,
         ShutdownOptions options)
     {
         lifetime.ApplicationStopping.Register(
-            () => logger.LogInformation("Получен сигнал остановки, завершаем работу..."));
+            () => logger.LogInformation("Stop signal received, shutting down..."));
 
         lifetime.ApplicationStopped.Register(
-            () => logger.LogInformation("Сервер остановлен."));
+            () => logger.LogInformation("Server stopped."));
 
         if (!options.ShutdownOnUnhandledException)
         {
@@ -39,18 +39,18 @@ public static class GracefulShutdown
         {
             logger.LogError(
                 eventArgs.Exception,
-                "Необработанное исключение в задаче (не фатально).");
+                "Unhandled exception in a task (not fatal).");
             eventArgs.SetObserved();
         };
     }
 
     /// <summary>
-    /// Обрабатывает фатальное исключение: пишет критическую запись в лог и
-    /// инициирует корректную остановку приложения.
+    /// Handles a fatal exception: writes a critical log entry and
+    /// starts a graceful application shutdown.
     /// </summary>
     public static void HandleFatal(ILogger logger, IHostApplicationLifetime lifetime, Exception? exception)
     {
-        logger.LogCritical(exception, "Необработанное исключение — инициируется остановка сервера.");
+        logger.LogCritical(exception, "Unhandled exception: starting server shutdown.");
         lifetime.StopApplication();
     }
 }

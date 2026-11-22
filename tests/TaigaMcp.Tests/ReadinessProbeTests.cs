@@ -47,7 +47,7 @@ public class ReadinessProbeTests
             Assert.True(first.IsReady);
             Assert.True(second.IsReady);
             Assert.True(third.IsReady);
-            // Реальный запрос к Taiga выполнен только один раз.
+            // The real request to Taiga was made only once.
             Assert.Single(handler.Requests);
         }
     }
