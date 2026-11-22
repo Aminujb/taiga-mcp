@@ -70,6 +70,6 @@ public class ToolsInvocationTests
             executed++;
         }
 
-        Assert.Equal(72, executed);
+        Assert.Equal(75, executed);
     }
 }

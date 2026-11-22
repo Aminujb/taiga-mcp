@@ -11,7 +11,7 @@ public sealed class ServerOptions
     /// "0.0.0.0" (по умолчанию) — все сетевые интерфейсы, "127.0.0.1" — только локально,
     /// также поддерживаются "localhost", "*", "+" и конкретный IP.
     /// </summary>
-    public string Host { get; set; } = "0.0.0.0";
+    public string Host { get; set; } = "127.0.0.1";
 
     /// <summary>Порт прослушивания.</summary>
     public int Port { get; set; } = 5000;

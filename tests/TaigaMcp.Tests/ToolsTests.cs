@@ -104,7 +104,7 @@ public class ToolsTests
             .Where(x => x.Attribute is not null)
             .ToList();
 
-        Assert.Equal(72, tools.Count);
+        Assert.Equal(75, tools.Count);
         Assert.Equal(tools.Count, tools.Select(x => x.Attribute!.Name).Distinct(StringComparer.Ordinal).Count());
         Assert.All(tools, x => Assert.False(x.Method.IsStatic));
         Assert.All(tools, x => Assert.False(string.IsNullOrWhiteSpace(x.Attribute!.Name)));

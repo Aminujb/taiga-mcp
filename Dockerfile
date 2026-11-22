@@ -38,8 +38,7 @@ WORKDIR /opt/mcp
 ENV DOTNET_EnableDiagnostics=0 \
     MCP_HOST=0.0.0.0 \
     MCP_PORT=8080 \
-    AUDIT_FILE_PATH=/opt/mcp/logs/audit.log \
-    TAIGA_CA_CERT_PATH=/opt/mcp/certs/taiga_leaf.pem
+    AUDIT_FILE_PATH=/opt/mcp/logs/audit.log
 
 COPY --from=build /opt/mcp /opt/mcp
 

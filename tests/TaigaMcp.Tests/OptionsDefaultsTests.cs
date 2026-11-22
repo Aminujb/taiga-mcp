@@ -41,7 +41,7 @@ public class OptionsDefaultsTests
     {
         var options = new ServerOptions();
 
-        Assert.Equal("0.0.0.0", options.Host);
+        Assert.Equal("127.0.0.1", options.Host);
         Assert.True(options.Port > 0);
     }
 

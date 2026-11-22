@@ -119,11 +119,11 @@ public sealed class TaskTools : TaigaToolBase
     }
 
     [McpServerTool(Name = "taiga_update_task")]
-    [Description("Изменяет задачу. По умолчанию PATCH; replace_all=true — PUT. Для OCC передайте version.")]
+    [Description("Partially updates a task (PATCH): only the fields given change. Pass version for optimistic concurrency. comment adds a comment to the ticket's history.")]
     public Task<string> UpdateTaskAsync(
         [Description("ID задачи.")] int task_id,
         [Description("Текущая версия объекта для OCC (рекомендуется).")] int? version = null,
-        [Description("Полная замена (PUT) вместо частичного изменения (PATCH).")] bool replace_all = false,
+        [Description("Comment added to the ticket's history with this change.")] string? comment = null,
         [Description("Заголовок.")] string? subject = null,
         [Description("Описание.")] string? description = null,
         [Description("ID пользовательской истории.")] int? user_story = null,
@@ -142,6 +142,7 @@ public sealed class TaskTools : TaigaToolBase
         {
             var body = JsonBody.Object(
                 ("version", version),
+                ("comment", comment),
                 ("subject", subject),
                 ("description", description),
                 ("user_story", user_story),
@@ -155,7 +156,7 @@ public sealed class TaskTools : TaigaToolBase
                 ("tags", tags),
                 ("watchers", watchers));
             var path = $"tasks/{task_id}";
-            return replace_all ? Client.PutAsync(path, body, cancellationToken) : Client.PatchAsync(path, body, cancellationToken);
+            return Client.PatchAsync(path, body, cancellationToken);
         });
     }
 
